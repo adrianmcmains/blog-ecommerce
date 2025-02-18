@@ -1,0 +1,16 @@
+# Hugo default output directory
+/public
+
+# Node modules
+/node_modules
+
+# Environment variables
+.env
+
+# Temporary files
+.DS_Store
+.hugo_build.lock
+
+# IDE specific files
+.idea
+.vscode

@@ -1,0 +1,45 @@
+<footer class="shop-footer bg-light py-4 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3">
+                <h5>Shop Info</h5>
+                <p>{{ .Site.Params.shop.description }}</p>
+            </div>
+            <div class="col-md-3">
+                <h5>Customer Service</h5>
+                <ul class="list-unstyled">
+                    <li><a href="/shop/shipping" class="text-decoration-none">Shipping Information</a></li>
+                    <li><a href="/shop/returns" class="text-decoration-none">Returns Policy</a></li>
+                    <li><a href="/shop/faq" class="text-decoration-none">FAQ</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h5>Quick Links</h5>
+                <ul class="list-unstyled">
+                    {{ range .Site.Menus.main }}
+                    <li><a href="{{ .URL }}" class="text-decoration-none">{{ .Name }}</a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h5>Contact Us</h5>
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-envelope"></i> shop@example.com</li>
+                    <li><i class="bi bi-telephone"></i> (555) 123-4567</li>
+                    <li><i class="bi bi-clock"></i> Mon-Fri: 9AM-5PM</li>
+                </ul>
+            </div>
+        </div>
+        <hr class="my-4">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0">&copy; {{ now.Format "2006" }} {{ .Site.Params.shop.title }}. All rights reserved.</p>
+            </div>
+            <div class="col-md-6 text-end">
+                <i class="bi bi-credit-card me-2"></i>
+                <i class="bi bi-paypal me-2"></i>
+                <i class="bi bi-stripe"></i>
+            </div>
+        </div>
+    </div>
+</footer>

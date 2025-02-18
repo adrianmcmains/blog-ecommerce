@@ -1,0 +1,27 @@
+{{ define "main" }}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>{{ .Title }}</h1>
+            {{ .Content }}
+            
+            <div class="row mt-4">
+                {{ range .Pages }}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {{ if .Params.image }}
+                            {{ partial "image.html" (dict "Src" .Params.image "Alt" .Title "Class" "card-img-top") }}
+                        {{ end }}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ .Title }}</h5>
+                            <p class="card-text">{{ .Summary }}</p>
+                            <a href="{{ .Permalink }}" class="btn btn-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

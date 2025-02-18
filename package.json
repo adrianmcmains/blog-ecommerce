@@ -1,0 +1,18 @@
+{
+  "name": "blog-ecommerce",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tinacms dev -c \"hugo server -D\"",
+    "build": "tinacms build && hugo",
+    "tina-dev": "tinacms dev",
+    "tina-build": "tinacms build"
+  },
+  "dependencies": {
+    "@tinacms/auth": "^1.0.10",
+    "@tinacms/cli": "^1.8.4",
+    "tinacms": "^2.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4"
+  }
+}

@@ -1,0 +1,30 @@
+<footer class="blog-footer bg-light py-4 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h5>About Us</h5>
+                <p>{{ .Site.Params.description }}</p>
+            </div>
+            <div class="col-md-4">
+                <h5>Quick Links</h5>
+                <ul class="list-unstyled">
+                    {{ range .Site.Menus.main }}
+                    <li><a href="{{ .URL }}" class="text-decoration-none">{{ .Name }}</a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h5>Contact</h5>
+                <ul class="list-unstyled">
+                    <li>Email: contact@example.com</li>
+                    <li>Phone: (555) 123-4567</li>
+                </ul>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12 text-center">
+                <p class="mb-0">&copy; {{ now.Format "2006" }} {{ .Site.Title }}. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</footer>

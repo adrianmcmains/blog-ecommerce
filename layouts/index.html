@@ -1,0 +1,123 @@
+{{ define "main" }}
+<div class="home-page">
+    <!-- Hero Section with Animation -->
+    <section class="hero py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 fade-in-left">
+                    <h1 class="display-4 fw-bold">{{ .Site.Title }}</h1>
+                    <p class="lead">{{ .Site.Params.description }}</p>
+                    <div class="mt-4 button-group">
+                        <a href="/blog" class="btn btn-primary btn-lg me-3 slide-up">Read Blog</a>
+                        <a href="/shop" class="btn btn-outline-primary btn-lg slide-up">Visit Shop</a>
+                    </div>
+                </div>
+                <div class="col-md-6 text-center fade-in-right">
+                    <img src="/images/hero-image.jpg" alt="Hero Image" class="img-fluid rounded shadow-lg hover-scale">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features py-5 bg-light">
+        <div class="container">
+            <h2 class="section-title text-center mb-5">Why Choose Us</h2>
+            <div class="row g-4">
+                <div class="col-md-4 fade-in-up">
+                    <div class="feature-card text-center p-4">
+                        <i class="bi bi-book display-4 text-primary mb-3"></i>
+                        <h3>Quality Content</h3>
+                        <p>Engaging blog posts and articles crafted with care.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 fade-in-up delay-1">
+                    <div class="feature-card text-center p-4">
+                        <i class="bi bi-shop display-4 text-primary mb-3"></i>
+                        <h3>Curated Products</h3>
+                        <p>Hand-picked selection of premium products.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 fade-in-up delay-2">
+                    <div class="feature-card text-center p-4">
+                        <i class="bi bi-heart display-4 text-primary mb-3"></i>
+                        <h3>Customer Focus</h3>
+                        <p>Dedicated to providing the best experience.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latest Blog Posts with Animation -->
+    <section class="latest-posts py-5">
+        <div class="container">
+            <h2 class="section-title text-center mb-5">Latest Blog Posts</h2>
+            <div class="row">
+                {{ range $index, $element := first 3 (where .Site.RegularPages "Section" "blog") }}
+                <div class="col-md-4 mb-4 fade-in-up delay-{{ $index }}">
+                    <div class="card blog-card h-100 hover-float">
+                        {{ if .Params.image }}
+                            <img src="{{ .Params.image }}" class="card-img-top" alt="{{ .Title }}">
+                        {{ end }}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ .Title }}</h5>
+                            <p class="card-text">{{ .Summary }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">{{ .Date.Format "Jan 2, 2006" }}</span>
+                                <a href="{{ .Permalink }}" class="btn btn-link text-primary">Read More →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Products with Animation -->
+    <section class="featured-products py-5 bg-light">
+        <div class="container">
+            <h2 class="section-title text-center mb-5">Featured Products</h2>
+            <div class="row">
+                {{ range $index, $element := first 4 (where .Site.RegularPages "Section" "shop") }}
+                <div class="col-md-3 mb-4 fade-in-up delay-{{ $index }}">
+                    <div class="card product-card h-100 hover-float">
+                        {{ if .Params.image }}
+                            <img src="{{ .Params.image }}" class="card-img-top" alt="{{ .Title }}">
+                        {{ end }}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ .Title }}</h5>
+                            {{ if .Params.price }}
+                            <p class="price mb-3">${{ .Params.price }}</p>
+                            {{ end }}
+                            <a href="{{ .Permalink }}" class="btn btn-primary w-100">View Product</a>
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8 text-center fade-in-up">
+                    <h2 class="mb-4">Stay Updated</h2>
+                    <p class="lead mb-4">Subscribe to our newsletter for the latest updates and exclusive offers.</p>
+                    <form class="newsletter-form slide-up">
+                        <div class="input-group mb-3">
+                            <input type="email" class="form-control" placeholder="Enter your email">
+                            <button class="btn btn-primary" type="submit">Subscribe</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{{ end }}

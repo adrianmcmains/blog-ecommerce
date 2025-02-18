@@ -1,0 +1,22 @@
+{{ define "main" }}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <article class="blog-post">
+                <h1>{{ .Title }}</h1>
+                {{ if .Date }}
+                <p class="post-meta">{{ .Date.Format "January 2, 2006" }}</p>
+                {{ end }}
+                
+                {{ if .Params.image }}
+                    {{ partial "image.html" (dict "Src" .Params.image "Alt" .Title "Class" "img-fluid mb-4") }}
+                {{ end }}
+                
+                <div class="content">
+                    {{ .Content }}
+                </div>
+            </article>
+        </div>
+    </div>
+</div>
+{{ end }}

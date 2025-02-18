@@ -1,0 +1,52 @@
+<div class="product-card animate-on-scroll">
+    <div class="product-image-wrapper">
+        {{ if .Params.image }}
+        <img src="{{ .Params.image }}" 
+             class="card-img-top" 
+             alt="{{ .Title }}"
+             data-fancybox="gallery"
+             data-caption="{{ .Title }}">
+        {{ end }}
+        <div class="product-actions">
+            <button class="btn btn-light btn-sm quick-view"
+                    data-bs-toggle="modal"
+                    data-bs-target="#quickViewModal"
+                    data-product-id="{{ .File.UniqueID }}"
+                    data-product-title="{{ .Title }}"
+                    data-product-price="{{ .Params.price }}"
+                    data-product-description="{{ .Summary }}">
+                <i class="bi bi-eye"></i> Quick View
+            </button>
+            <button class="btn btn-primary btn-sm add-to-cart"
+                    data-id="{{ .File.UniqueID }}"
+                    data-title="{{ .Title }}"
+                    data-price="{{ .Params.price }}">
+                <i class="bi bi-cart-plus"></i> Add to Cart
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">{{ .Title }}</h5>
+        {{ if .Params.price }}
+        <p class="price">${{ .Params.price }}</p>
+        {{ end }}
+        <div class="product-meta">
+            {{ if .Params.categories }}
+            <div class="categories">
+                {{ range .Params.categories }}
+                <span class="badge bg-light text-dark">{{ . }}</span>
+                {{ end }}
+            </div>
+            {{ end }}
+            {{ if .Params.stockQuantity }}
+            <div class="stock-status">
+                {{ if gt .Params.stockQuantity 0 }}
+                <span class="badge bg-success">In Stock</span>
+                {{ else }}
+                <span class="badge bg-danger">Out of Stock</span>
+                {{ end }}
+            </div>
+            {{ end }}
+        </div>
+    </div>
+</div>

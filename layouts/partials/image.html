@@ -1,0 +1,18 @@
+{{ $src := .Src }}
+{{ $alt := .Alt }}
+{{ $class := .Class }}
+
+{{ if $src }}
+  {{ if hasPrefix $src "http" }}
+    <img src="{{ $src }}" alt="{{ $alt }}" class="{{ $class }}">
+  {{ else }}
+    {{ $image := resources.Get $src }}
+    {{ if $image }}
+      <img src="{{ $image.RelPermalink }}" alt="{{ $alt }}" class="{{ $class }}">
+    {{ else }}
+      <img src="/images/default.jpg" alt="{{ $alt }}" class="{{ $class }}">
+    {{ end }}
+  {{ end }}
+{{ else }}
+  <img src="/images/default.jpg" alt="{{ $alt }}" class="{{ $class }}">
+{{ end }}

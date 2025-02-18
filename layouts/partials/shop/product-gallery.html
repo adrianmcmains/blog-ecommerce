@@ -1,0 +1,65 @@
+<div class="product-gallery">
+    <!-- Main Image -->
+    <div class="main-image mb-3">
+        {{ if .Params.images }}
+        <img src="{{ index .Params.images 0 }}" 
+             class="img-fluid rounded" 
+             id="main-product-image"
+             data-fancybox="product-gallery"
+             alt="{{ .Title }}">
+        {{ end }}
+    </div>
+
+    <!-- Thumbnail Slider -->
+    {{ if gt (len .Params.images) 1 }}
+    <div class="swiper thumbnail-slider">
+        <div class="swiper-wrapper">
+            {{ range $index, $image := .Params.images }}
+            <div class="swiper-slide">
+                <img src="{{ $image }}" 
+                     class="img-thumbnail" 
+                     onclick="updateMainImage('{{ $image }}')"
+                     data-fancybox="product-gallery"
+                     alt="Product image {{ add $index 1 }}">
+            </div>
+            {{ end }}
+        </div>
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+    </div>
+    {{ end }}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Swiper
+        new Swiper('.thumbnail-slider', {
+            slidesPerView: 4,
+            spaceBetween: 10,
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+            breakpoints: {
+                320: {
+                    slidesPerView: 3,
+                },
+                480: {
+                    slidesPerView: 4,
+                },
+                768: {
+                    slidesPerView: 5,
+                }
+            }
+        });
+
+        // Initialize Fancybox
+        Fancybox.bind('[data-fancybox="product-gallery"]', {
+            loop: true,
+        });
+    });
+
+    function updateMainImage(src) {
+        document.getElementById('main-product-image').src = src;
+    }
+</script>

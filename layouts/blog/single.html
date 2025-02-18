@@ -1,0 +1,215 @@
+{{ define "main" }}
+<article class="blog-single">
+    <!-- Hero Section -->
+    <div class="post-hero" {{ if .Params.image }}style="background-image: url('{{ .Params.image }}')"{{ end }}>
+        <div class="container">
+            <div class="hero-content">
+                <div class="post-meta">
+                    {{ if .Params.categories }}
+                    <div class="categories">
+                        {{ range .Params.categories }}
+                        <a href="/categories/{{ . | urlize }}" class="category">{{ . }}</a>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                    <span class="date"><i class="bi bi-calendar"></i> {{ .Date.Format "January 2, 2006" }}</span>
+                    {{ if .Params.author }}
+                    <span class="author"><i class="bi bi-person"></i> {{ .Params.author }}</span>
+                    {{ end }}
+                    <span class="reading-time"><i class="bi bi-clock"></i> {{ .ReadingTime }} min read</span>
+                </div>
+                <h1 class="post-title">{{ .Title }}</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Table of Contents -->
+                {{ if .TableOfContents }}
+                <div class="toc-wrapper">
+                    <div class="toc-header">
+                        <h4>Table of Contents</h4>
+                        <button class="btn btn-sm btn-outline-primary toggle-toc">
+                            <i class="bi bi-list"></i>
+                        </button>
+                    </div>
+                    <div class="toc-content">
+                        {{ .TableOfContents }}
+                    </div>
+                </div>
+                {{ end }}
+
+                <!-- Post Content -->
+                <div class="post-content">
+                    {{ .Content }}
+                </div>
+
+                <!-- Tags -->
+                {{ if .Params.tags }}
+                <div class="post-tags">
+                    {{ range .Params.tags }}
+                    <a href="/tags/{{ . | urlize }}" class="tag">{{ . }}</a>
+                    {{ end }}
+                </div>
+                {{ end }}
+
+                <!-- Author Bio -->
+                {{ if .Params.author }}
+                <div class="author-bio">
+                    <div class="author-image">
+                        <img src="{{ .Params.author_image | default "/images/default-author.jpg" }}" alt="{{ .Params.author }}">
+                    </div>
+                    <div class="author-info">
+                        <h4>{{ .Params.author }}</h4>
+                        <p>{{ .Params.author_bio | default "Author bio not available" }}</p>
+                        <div class="author-social">
+                            {{ with .Params.author_twitter }}
+                            <a href="{{ . }}" target="_blank"><i class="bi bi-twitter"></i></a>
+                            {{ end }}
+                            {{ with .Params.author_linkedin }}
+                            <a href="{{ . }}" target="_blank"><i class="bi bi-linkedin"></i></a>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+
+                <!-- Social Share -->
+                <div class="social-share">
+                    <h4>Share this post</h4>
+                    <div class="share-buttons">
+                        <button class="share-btn twitter" data-url="{{ .Permalink }}" data-title="{{ .Title }}">
+                            <i class="bi bi-twitter"></i> Twitter
+                        </button>
+                        <button class="share-btn facebook" data-url="{{ .Permalink }}" data-title="{{ .Title }}">
+                            <i class="bi bi-facebook"></i> Facebook
+                        </button>
+                        <button class="share-btn linkedin" data-url="{{ .Permalink }}" data-title="{{ .Title }}">
+                            <i class="bi bi-linkedin"></i> LinkedIn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Next/Previous Posts -->
+                <div class="post-navigation">
+                    {{ with .PrevInSection }}
+                    <a href="{{ .Permalink }}" class="prev-post">
+                        <span>← Previous Post</span>
+                        <h5>{{ .Title }}</h5>
+                    </a>
+                    {{ end }}
+                    {{ with .NextInSection }}
+                    <a href="{{ .Permalink }}" class="next-post">
+                        <span>Next Post →</span>
+                        <h5>{{ .Title }}</h5>
+                    </a>
+                    {{ end }}
+                </div>
+
+                <!-- Related Posts -->
+                {{ $related := .Site.RegularPages.Related . | first 3 }}
+                {{ with $related }}
+                <div class="related-posts">
+                    <h3>Related Posts</h3>
+                    <div class="row">
+                        {{ range . }}
+                        <div class="col-md-4">
+                            <div class="related-post-card">
+                                {{ if .Params.image }}
+                                <img src="{{ .Params.image }}" alt="{{ .Title }}">
+                                {{ end }}
+                                <div class="post-info">
+                                    <h5><a href="{{ .Permalink }}">{{ .Title }}</a></h5>
+                                    <span class="date">{{ .Date.Format "Jan 2, 2006" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+                {{ end }}
+
+                <!-- Comments Section -->
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <div id="comments-container">
+                        <!-- Comments will be loaded here -->
+                    </div>
+                    <div class="comment-form">
+                        <h4>Leave a Comment</h4>
+                        <form id="comment-form">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comment" class="form-label">Comment</label>
+                                <textarea class="form-control" id="comment" rows="4" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit Comment</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Progress Bar -->
+                <div class="reading-progress-wrapper">
+                    <div class="reading-progress"></div>
+                </div>
+
+                <!-- Sticky Sidebar Content -->
+                <div class="sidebar-content">
+                    <!-- Table of Contents (Mobile) -->
+                    {{ if .TableOfContents }}
+                    <div class="toc-mobile">
+                        <div class="toc-header">
+                            <h4>Table of Contents</h4>
+                            <button class="btn btn-sm btn-outline-primary toggle-toc-mobile">
+                                <i class="bi bi-list"></i>
+                            </button>
+                        </div>
+                        <div class="toc-content">
+                            {{ .TableOfContents }}
+                        </div>
+                    </div>
+                    {{ end }}
+
+                    <!-- Newsletter Signup -->
+                    <div class="sidebar-widget newsletter-widget">
+                        <h4>Subscribe to Our Newsletter</h4>
+                        <p>Get notified of new posts and updates</p>
+                        <form class="newsletter-form">
+                            <input type="email" placeholder="Your email address" required>
+                            <button type="submit" class="btn btn-primary">Subscribe</button>
+                        </form>
+                    </div>
+
+                    <!-- Popular Posts -->
+                    <div class="sidebar-widget popular-posts">
+                        <h4>Popular Posts</h4>
+                        {{ range first 3 .Site.RegularPages }}
+                        <div class="popular-post">
+                            {{ if .Params.image }}
+                            <img src="{{ .Params.image }}" alt="{{ .Title }}">
+                            {{ end }}
+                            <div class="post-info">
+                                <h5><a href="{{ .Permalink }}">{{ .Title }}</a></h5>
+                                <span class="date">{{ .Date.Format "Jan 2, 2006" }}</span>
+                            </div>
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+{{ end }}

@@ -1,0 +1,16 @@
+<!-- Meta tags -->
+<meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.shop.description }}{{ end }}">
+<meta name="author" content="{{ .Site.Params.author }}">
+
+<!-- Open Graph -->
+<meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}">
+<meta property="og:description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.shop.description }}{{ end }}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ .Permalink }}">
+
+<!-- CSS -->
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<link rel="stylesheet" href="/css/shop.css">
+
+<!-- Favicon -->
+<link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon">

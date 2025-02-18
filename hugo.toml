@@ -1,0 +1,39 @@
+baseURL = "http://localhost:1313"
+languageCode = "en-us"
+title = "Blog & Shop"
+theme = ["reporter", "hargo"]
+
+# Site Parameters
+[params]
+  description = "Integrated Blog and E-commerce Platform"
+  author = "Your Name"
+  # Blog Section Parameters
+  [params.blog]
+    title = "Our Blog"
+    description = "Latest articles and updates"
+  
+  # Shop Section Parameters
+  [params.shop]
+    title = "Shop"
+    description = "Browse our products"
+    currency = "UGX"
+
+# Menu Configuration
+[menu]
+  [[menu.main]]
+    name = "Home"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    name = "Blog"
+    url = "/blog/"
+    weight = 2
+  [[menu.main]]
+    name = "Shop"
+    url = "/shop/"
+    weight = 3
+
+# Output Formats
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+  section = ["HTML", "RSS", "JSON"]
