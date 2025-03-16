@@ -94,3 +94,8 @@ type OrderFilter struct {
     PageSize  string `form:"page_size,default=10"`
     Status    string `form:"status"`
 }
+
+// In models/input.go
+type RefreshTokenInput struct {
+    RefreshToken string `json:"refresh_token" binding:"required"`
+}

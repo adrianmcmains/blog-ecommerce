@@ -1,0 +1,3 @@
+type  [error opening dir]
+
+0 directories

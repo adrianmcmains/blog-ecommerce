@@ -1,22 +1,21 @@
+// tina/config.ts
 import { defineConfig } from "tinacms";
-
-export default defineConfig({
+var config_default = defineConfig({
   branch: process.env.TINA_BRANCH || "",
-  clientId: process.env.TINA_PUBLIC_CLIENT_ID || "", // process.env.CLIENT_ID,
-  token: process.env.TINA_TOKEN || "", // process.env.TOKEN,
-
+  clientId: process.env.TINA_PUBLIC_CLIENT_ID || "",
+  // process.env.CLIENT_ID,
+  token: process.env.TINA_TOKEN || "",
+  // process.env.TOKEN,
   build: {
     outputFolder: "admin",
-    publicFolder: "static",
+    publicFolder: "static"
   },
-
   media: {
     tina: {
       mediaRoot: "static/images",
-      publicFolder: "static",
-    },
+      publicFolder: "static"
+    }
   },
-
   // See docs on content modeling for more options
   schema: {
     collections: [
@@ -28,10 +27,10 @@ export default defineConfig({
         ui: {
           filename: {
             readonly: false,
-            slugify: values => {
-              return `${values?.title?.toLowerCase().replace(/ /g, '-')}` || ""
-            },
-          },
+            slugify: (values) => {
+              return `${values?.title?.toLowerCase().replace(/ /g, "-")}` || "";
+            }
+          }
         },
         fields: [
           {
@@ -39,24 +38,24 @@ export default defineConfig({
             label: "Title",
             name: "title",
             required: true,
-            isTitle: true,
+            isTitle: true
           },
           {
             type: "datetime",
             name: "date",
             label: "Publication Date",
-            required: true,
+            required: true
           },
           {
             type: "image",
             name: "image",
-            label: "Featured Image",
+            label: "Featured Image"
           },
           {
             type: "string",
             name: "author",
             label: "Author",
-            required: true,
+            required: true
           },
           {
             type: "string",
@@ -64,8 +63,8 @@ export default defineConfig({
             label: "Categories",
             list: true,
             ui: {
-              component: "tags",
-            },
+              component: "tags"
+            }
           },
           {
             type: "rich-text",
@@ -81,17 +80,17 @@ export default defineConfig({
                     name: "language",
                     label: "Language",
                     type: "string",
-                    options: ["javascript", "css", "html", "python", "go"],
+                    options: ["javascript", "css", "html", "python", "go"]
                   },
                   {
                     name: "code",
                     label: "Code",
                     type: "string",
                     ui: {
-                      component: "textarea",
-                    },
-                  },
-                ],
+                      component: "textarea"
+                    }
+                  }
+                ]
               },
               {
                 name: "BlockQuote",
@@ -102,19 +101,19 @@ export default defineConfig({
                     label: "Quote",
                     type: "string",
                     ui: {
-                      component: "textarea",
-                    },
+                      component: "textarea"
+                    }
                   },
                   {
                     name: "author",
                     label: "Author",
-                    type: "string",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+                    type: "string"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       {
         name: "shop",
@@ -124,10 +123,10 @@ export default defineConfig({
         ui: {
           filename: {
             readonly: false,
-            slugify: values => {
-              return `${values?.title?.toLowerCase().replace(/ /g, '-')}` || ""
-            },
-          },
+            slugify: (values) => {
+              return `${values?.title?.toLowerCase().replace(/ /g, "-")}` || "";
+            }
+          }
         },
         fields: [
           {
@@ -135,25 +134,25 @@ export default defineConfig({
             name: "title",
             label: "Product Name",
             required: true,
-            isTitle: true,
+            isTitle: true
           },
           {
             type: "number",
             name: "price",
             label: "Price",
-            required: true,
+            required: true
           },
           {
             type: "number",
             name: "stockQuantity",
             label: "Stock Quantity",
-            required: true,
+            required: true
           },
           {
             type: "image",
             name: "image",
             label: "Product Image",
-            required: true,
+            required: true
           },
           {
             type: "string",
@@ -161,8 +160,8 @@ export default defineConfig({
             label: "Categories",
             list: true,
             ui: {
-              component: "tags",
-            },
+              component: "tags"
+            }
           },
           {
             type: "object",
@@ -173,27 +172,27 @@ export default defineConfig({
               {
                 type: "string",
                 name: "name",
-                label: "Variant Name",
+                label: "Variant Name"
               },
               {
                 type: "number",
                 name: "price",
-                label: "Price",
+                label: "Price"
               },
               {
                 type: "number",
                 name: "stock",
-                label: "Stock",
-              },
-            ],
+                label: "Stock"
+              }
+            ]
           },
           {
             type: "rich-text",
             name: "body",
             label: "Product Description",
-            isBody: true,
-          },
-        ],
+            isBody: true
+          }
+        ]
       },
       {
         name: "settings",
@@ -203,8 +202,8 @@ export default defineConfig({
         ui: {
           allowedActions: {
             create: false,
-            delete: false,
-          },
+            delete: false
+          }
         },
         fields: [
           {
@@ -215,22 +214,22 @@ export default defineConfig({
               {
                 type: "string",
                 name: "title",
-                label: "Site Title",
+                label: "Site Title"
               },
               {
                 type: "string",
                 name: "description",
                 label: "Site Description",
                 ui: {
-                  component: "textarea",
-                },
+                  component: "textarea"
+                }
               },
               {
                 type: "image",
                 name: "logo",
-                label: "Site Logo",
-              },
-            ],
+                label: "Site Logo"
+              }
+            ]
           },
           {
             type: "object",
@@ -240,30 +239,33 @@ export default defineConfig({
               {
                 type: "string",
                 name: "twitter",
-                label: "Twitter URL",
+                label: "Twitter URL"
               },
               {
                 type: "string",
                 name: "facebook",
-                label: "Facebook URL",
+                label: "Facebook URL"
               },
               {
                 type: "string",
                 name: "instagram",
-                label: "Instagram URL",
-              },
-            ],
-          },
-        ],
-      },
-    ],
+                label: "Instagram URL"
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   search: {
     tina: {
       indexerToken: process.env.TINA_SEARCH_TOKEN,
-      stopwordLanguages: ['eng']
+      stopwordLanguages: ["eng"]
     },
     indexBatchSize: 100,
     maxSearchIndexFieldLength: 100
-  },
+  }
 });
+export {
+  config_default as default
+};

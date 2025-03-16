@@ -1,0 +1,41 @@
+fragment BlogParts on Blog {
+  __typename
+  title
+  date
+  image
+  author
+  categories
+  body
+}
+
+fragment ShopParts on Shop {
+  __typename
+  title
+  price
+  stockQuantity
+  image
+  categories
+  variants {
+    __typename
+    name
+    price
+    stock
+  }
+  body
+}
+
+fragment SettingsParts on Settings {
+  __typename
+  site {
+    __typename
+    title
+    description
+    logo
+  }
+  social {
+    __typename
+    twitter
+    facebook
+    instagram
+  }
+}

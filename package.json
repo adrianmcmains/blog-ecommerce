@@ -8,11 +8,12 @@
     "tina-build": "tinacms build"
   },
   "dependencies": {
-    "@tinacms/auth": "^1.0.10",
-    "@tinacms/cli": "^1.8.4",
-    "tinacms": "^2.6.4"
+    "@tinacms/auth": "^1.0.3",
+    "@tinacms/cli": "^1.5.29",
+    "tinacms": "^1.5.20"
   },
   "devDependencies": {
-    "@types/node": "^22.13.4"
+    "@types/node": "^18.0.0",
+    "typescript": "^4.9.5"
   }
 }
