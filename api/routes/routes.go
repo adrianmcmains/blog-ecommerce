@@ -3,7 +3,6 @@ package routes
 import (
 	"github.com/adrianmcmains/blog-ecommerce/api/handler"
 	"github.com/adrianmcmains/blog-ecommerce/api/middleware"
-	//"github.com/adrianmcmains/blog-ecommerce/internal/handler"
 	"github.com/gin-gonic/gin"
 )
 
