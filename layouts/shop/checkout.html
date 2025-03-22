@@ -1,0 +1,330 @@
+{{ define "main" }}
+<div class="checkout-page container py-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <h1>{{ i18n "checkout" }}</h1>
+            
+            <div id="checkout-error" class="alert alert-danger" style="display: none;"></div>
+            
+            <form id="checkout-form" class="needs-validation" novalidate>
+                <!-- Customer Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ i18n "customerInformation" }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label for="name">{{ i18n "yourName" }} <span class="text-danger">*</span></label>
+                            <input type="text" id="name" name="name" class="form-control" required>
+                            <div class="invalid-feedback">{{ i18n "required" }}</div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="email">{{ i18n "yourEmail" }} <span class="text-danger">*</span></label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                            <div class="invalid-feedback">{{ i18n "invalidEmail" }}</div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="phone">{{ i18n "phone" }}</label>
+                            <input type="tel" id="phone" name="phone" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Shipping Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ i18n "shippingInformation" }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label for="shipping_address">{{ i18n "address" }} <span class="text-danger">*</span></label>
+                            <textarea id="shipping_address" name="shipping_address" class="form-control" rows="3" required></textarea>
+                            <div class="invalid-feedback">{{ i18n "required" }}</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="shipping_city">{{ i18n "city" }} <span class="text-danger">*</span></label>
+                                    <input type="text" id="shipping_city" name="shipping_city" class="form-control" required>
+                                    <div class="invalid-feedback">{{ i18n "required" }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="shipping_postal_code">{{ i18n "postalCode" }} <span class="text-danger">*</span></label>
+                                    <input type="text" id="shipping_postal_code" name="shipping_postal_code" class="form-control" required>
+                                    <div class="invalid-feedback">{{ i18n "required" }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="shipping_country">{{ i18n "country" }} <span class="text-danger">*</span></label>
+                            <select id="shipping_country" name="shipping_country" class="form-control" required>
+                                <option value="">{{ i18n "selectCountry" }}</option>
+                                <option value="US">United States</option>
+                                <option value="CA">Canada</option>
+                                <option value="MX">Mexico</option>
+                                <option value="GB">United Kingdom</option>
+                                <option value="FR">France</option>
+                                <option value="DE">Germany</option>
+                                <option value="JP">Japan</option>
+                                <option value="AU">Australia</option>
+                                <!-- Add more countries as needed -->
+                            </select>
+                            <div class="invalid-feedback">{{ i18n "required" }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Billing Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ i18n "billingInformation" }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="same_as_shipping" name="same_as_shipping" checked>
+                            <label class="form-check-label" for="same_as_shipping">
+                                {{ i18n "sameAsShipping" }}
+                            </label>
+                        </div>
+                        
+                        <div id="billing_address_fields" style="display: none;">
+                            <div class="form-group mb-3">
+                                <label for="billing_address">{{ i18n "address" }} <span class="text-danger">*</span></label>
+                                <textarea id="billing_address" name="billing_address" class="form-control" rows="3"></textarea>
+                                <div class="invalid-feedback">{{ i18n "required" }}</div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="billing_city">{{ i18n "city" }} <span class="text-danger">*</span></label>
+                                        <input type="text" id="billing_city" name="billing_city" class="form-control">
+                                        <div class="invalid-feedback">{{ i18n "required" }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="billing_postal_code">{{ i18n "postalCode" }} <span class="text-danger">*</span></label>
+                                        <input type="text" id="billing_postal_code" name="billing_postal_code" class="form-control">
+                                        <div class="invalid-feedback">{{ i18n "required" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="billing_country">{{ i18n "country" }} <span class="text-danger">*</span></label>
+                                <select id="billing_country" name="billing_country" class="form-control">
+                                    <option value="">{{ i18n "selectCountry" }}</option>
+                                    <option value="US">United States</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="MX">Mexico</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="FR">France</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="AU">Australia</option>
+                                    <!-- Add more countries as needed -->
+                                </select>
+                                <div class="invalid-feedback">{{ i18n "required" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payment Method -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ i18n "paymentMethod" }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-methods">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="payment_method" id="payment_eversend" value="eversend" checked>
+                                <label class="form-check-label" for="payment_eversend">
+                                    <img src="/images/payment/eversend-logo.png" alt="Eversend" height="24">
+                                    Eversend Payment
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="payment_method" id="payment_paypal" value="paypal">
+                                <label class="form-check-label" for="payment_paypal">
+                                    <img src="/images/payment/paypal-logo.png" alt="PayPal" height="24">
+                                    PayPal
+                                </label>
+                            </div>
+                            
+                            <div class="payment-method-description mt-3">
+                                <div id="eversend-description" class="payment-description">
+                                    <p>{{ i18n "payWithEversend" }}</p>
+                                    <p>{{ i18n "securePayment" }}</p>
+                                </div>
+                                
+                                <div id="paypal-description" class="payment-description" style="display: none;">
+                                    <p>{{ i18n "payWithPayPal" }}</p>
+                                    <p>{{ i18n "redirectToPayPal" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Notes -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ i18n "orderNotes" }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="notes">{{ i18n "additionalInformation" }}</label>
+                            <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Terms and Conditions -->
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                    <label class="form-check-label" for="terms">
+                        {{ i18n "iAgree" }} <a href="/terms" target="_blank">{{ i18n "termsAndConditions" }}</a>
+                    </label>
+                    <div class="invalid-feedback">{{ i18n "mustAgree" }}</div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="text-end">
+                    <button type="submit" class="btn btn-lg btn-primary">{{ i18n "placeOrder" }}</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Order Summary -->
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h3 class="card-title">{{ i18n "orderSummary" }}</h3>
+                </div>
+                <div class="card-body">
+                    <div id="cart-items-summary"></div>
+                    
+                    <div class="d-flex justify-content-between mt-3">
+                        <span>{{ i18n "subtotal" }}:</span>
+                        <span id="cart-subtotal"></span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <span>{{ i18n "shipping" }}:</span>
+                        <span id="shipping-cost"></span>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>{{ i18n "total" }}:</span>
+                        <span id="cart-total"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script to handle checkout functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle billing address fields
+    const sameAsShippingCheckbox = document.getElementById('same_as_shipping');
+    const billingAddressFields = document.getElementById('billing_address_fields');
+    
+    sameAsShippingCheckbox.addEventListener('change', function() {
+        billingAddressFields.style.display = this.checked ? 'none' : 'block';
+        
+        // Toggle required attribute on billing fields
+        const billingInputs = billingAddressFields.querySelectorAll('input, select, textarea');
+        billingInputs.forEach(input => {
+            input.required = !this.checked;
+        });
+    });
+    
+    // Toggle payment method descriptions
+    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+    const eversendDescription = document.getElementById('eversend-description');
+    const paypalDescription = document.getElementById('paypal-description');
+    
+    paymentMethods.forEach(method => {
+        method.addEventListener('change', function() {
+            if (this.value === 'eversend') {
+                eversendDescription.style.display = 'block';
+                paypalDescription.style.display = 'none';
+            } else if (this.value === 'paypal') {
+                eversendDescription.style.display = 'none';
+                paypalDescription.style.display = 'block';
+            }
+        });
+    });
+    
+    // Form validation
+    const form = document.getElementById('checkout-form');
+    
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Populate order summary from cart
+    if (window.cart) {
+        // Render cart items
+        const cartItemsSummary = document.getElementById('cart-items-summary');
+        if (cartItemsSummary) {
+            cartItemsSummary.innerHTML = '';
+            
+            // Add each item
+            window.cart.items.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'd-flex justify-content-between align-items-center mb-2';
+                itemElement.innerHTML = `
+                    <div>
+                        <span>${item.name}</span>
+                        <small class="text-muted d-block">Qty: ${item.quantity}</small>
+                    </div>
+                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                `;
+                cartItemsSummary.appendChild(itemElement);
+            });
+        }
+        
+        // Set subtotal
+        const subtotalElement = document.getElementById('cart-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = `${window.cart.totalPrice.toFixed(2)}`;
+        }
+        
+        // Set shipping cost (could be calculated based on cart contents, weight, destination, etc.)
+        const shippingCostElement = document.getElementById('shipping-cost');
+        const shippingCost = 5.00; // Example fixed shipping cost
+        if (shippingCostElement) {
+            shippingCostElement.textContent = `${shippingCost.toFixed(2)}`;
+        }
+        
+        // Set total with shipping
+        const totalElement = document.getElementById('cart-total');
+        if (totalElement) {
+            const total = window.cart.totalPrice + shippingCost;
+            totalElement.textContent = `${total.toFixed(2)}`;
+        }
+    }
+});
+</script>
+{{ end }}

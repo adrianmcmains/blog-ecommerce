@@ -1,0 +1,118 @@
+{{ define "main" }}
+<div id="payment-confirmation" class="confirmation-page container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h1 class="card-title">{{ i18n "orderConfirmation" }}</h1>
+                </div>
+                <div class="card-body">
+                    <!-- Payment Status Message -->
+                    <div class="text-center mb-4">
+                        <div id="confirmation-message" class="alert alert-info">
+                            {{ i18n "processingPayment" }}
+                        </div>
+                    </div>
+                    
+                    <!-- Processing Animation -->
+                    <div id="processing-animation" class="text-center mb-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">{{ i18n "loading" }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Details (will be populated by JavaScript) -->
+                    <div id="order-details" class="mt-4"></div>
+                    
+                    <!-- Actions -->
+                    <div class="text-center mt-4">
+                        <a href="/shop" class="btn btn-primary">{{ i18n "continueShopping" }}</a>
+                        <a href="/account/orders" class="btn btn-outline-secondary">{{ i18n "viewOrders" }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Status Styles -->
+<style>
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.info-message {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+.order-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+}
+
+.order-status.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.order-status.payment_pending {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.order-status.paid {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.order-status.canceled, 
+.order-status.payment_canceled,
+.order-status.payment_failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.order-status.shipped {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.order-status.delivered {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.order-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.order-items-table th,
+.order-items-table td {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.order-items-table th {
+    background-color: #f8f9fa;
+}
+
+.order-summary,
+.shipping-info {
+    margin-bottom: 1.5rem;
+}
+</style>
+{{ end }}

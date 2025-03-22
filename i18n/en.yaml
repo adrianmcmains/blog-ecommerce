@@ -1,0 +1,135 @@
+# English translations
+
+# General site elements
+- id: home
+  translation: "Home"
+- id: blog
+  translation: "Blog"
+- id: shop
+  translation: "Shop"
+- id: about
+  translation: "About"
+- id: contact
+  translation: "Contact"
+- id: search
+  translation: "Search"
+- id: login
+  translation: "Login"
+- id: register
+  translation: "Register"
+- id: logout
+  translation: "Logout"
+- id: myAccount
+  translation: "My Account"
+
+# Blog elements
+- id: recentPosts
+  translation: "Recent Posts"
+- id: categories
+  translation: "Categories"
+- id: tags
+  translation: "Tags"
+- id: readMore
+  translation: "Read More"
+- id: postedOn
+  translation: "Posted on"
+- id: by
+  translation: "by"
+- id: relatedPosts
+  translation: "Related Posts"
+- id: comments
+  translation: "Comments"
+- id: leaveComment
+  translation: "Leave a Comment"
+- id: yourName
+  translation: "Your Name"
+- id: yourEmail
+  translation: "Your Email"
+- id: yourMessage
+  translation: "Your Message"
+- id: submit
+  translation: "Submit"
+
+# Shop elements
+- id: addToCart
+  translation: "Add to Cart"
+- id: outOfStock
+  translation: "Out of Stock"
+- id: price
+  translation: "Price"
+- id: salePrice
+  translation: "Sale Price"
+- id: quantity
+  translation: "Quantity"
+- id: cart
+  translation: "Cart"
+- id: emptyCart
+  translation: "Your cart is empty"
+- id: checkout
+  translation: "Checkout"
+- id: subtotal
+  translation: "Subtotal"
+- id: total
+  translation: "Total"
+- id: continueShopping
+  translation: "Continue Shopping"
+- id: proceedToCheckout
+  translation: "Proceed to Checkout"
+- id: shippingInformation
+  translation: "Shipping Information"
+- id: billingInformation
+  translation: "Billing Information"
+- id: paymentMethod
+  translation: "Payment Method"
+- id: orderSummary
+  translation: "Order Summary"
+- id: placeOrder
+  translation: "Place Order"
+- id: orderConfirmation
+  translation: "Order Confirmation"
+- id: orderNumber
+  translation: "Order Number"
+- id: thankYouOrder
+  translation: "Thank you for your order!"
+
+# User account
+- id: profile
+  translation: "Profile"
+- id: orders
+  translation: "Orders"
+- id: wishlist
+  translation: "Wishlist"
+- id: settings
+  translation: "Settings"
+- id: changePassword
+  translation: "Change Password"
+- id: currentPassword
+  translation: "Current Password"
+- id: newPassword
+  translation: "New Password"
+- id: confirmPassword
+  translation: "Confirm Password"
+- id: updateProfile
+  translation: "Update Profile"
+- id: saveChanges
+  translation: "Save Changes"
+
+# Form validation
+- id: required
+  translation: "This field is required"
+- id: invalidEmail
+  translation: "Please enter a valid email address"
+- id: passwordMismatch
+  translation: "Passwords do not match"
+- id: passwordLength
+  translation: "Password must be at least 8 characters"
+
+# Error messages
+- id: pageNotFound
+  translation: "Page not found"
+- id: backToHome
+  translation: "Back to Home"
+- id: serverError
+  translation: "Server error"
+- id: tryAgainLater
+  translation: "Please try again later"

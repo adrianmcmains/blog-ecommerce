@@ -1,0 +1,193 @@
+<!-- layouts/shop/single.html -->
+{{ define "main" }}
+<div class="product-page container py-5">
+  <div class="row">
+    <!-- Product images -->
+    <div class="col-md-6 mb-4 mb-md-0">
+      <div class="product-images">
+        <div class="product-main-image mb-3">
+          {{ if .Params.Images }}
+            <img id="main-product-image" src="{{ index .Params.Images 0 }}" alt="{{ .Title }}" class="img-fluid">
+          {{ else }}
+            <img id="main-product-image" src="/images/placeholder-product.jpg" alt="{{ .Title }}" class="img-fluid">
+          {{ end }}
+        </div>
+        
+        {{ if gt (len .Params.Images) 1 }}
+        <div class="product-thumbnails d-flex">
+          {{ range $index, $image := .Params.Images }}
+            <div class="thumbnail-item me-2 {{ if eq $index 0 }}active{{ end }}" data-image="{{ $image }}">
+              <img src="{{ $image }}" alt="{{ $.Title }}" class="img-fluid">
+            </div>
+          {{ end }}
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    
+    <!-- Product info -->
+    <div class="col-md-6">
+      <div class="product-info">
+        <h1 class="product-title">{{ .Title }}</h1>
+        
+        <div class="product-price mb-4">
+          {{ if .Params.SalePrice }}
+            <span class="sale-price">${{ printf "%.2f" .Params.SalePrice }}</span>
+            <span class="regular-price">${{ printf "%.2f" .Params.Price }}</span>
+          {{ else }}
+            <span class="current-price">${{ printf "%.2f" .Params.Price }}</span>
+          {{ end }}
+        </div>
+        
+        <div class="product-description mb-4">
+          {{ .Content }}
+        </div>
+        
+        <div class="product-meta mb-4">
+          <div class="sku mb-2">
+            <strong>SKU:</strong> {{ .Params.SKU }}
+          </div>
+          
+          <div class="stock mb-2">
+            <strong>Availability:</strong> 
+            {{ if gt .Params.Stock 0 }}
+              <span class="text-success">In Stock ({{ .Params.Stock }} available)</span>
+            {{ else }}
+              <span class="text-danger">Out of Stock</span>
+            {{ end }}
+          </div>
+          
+          {{ if .Params.Categories }}
+          <div class="categories mb-2">
+            <strong>Categories:</strong>
+            {{ range $index, $category := .Params.Categories }}
+              {{ if ne $index 0 }}, {{ end }}
+              <a href="/product-categories/{{ . | urlize }}">{{ . }}</a>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+        
+        {{ if gt .Params.Stock 0 }}
+        <div class="product-actions mb-4">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="quantity-control d-flex align-items-center">
+                <button class="btn btn-outline-secondary quantity-btn" data-action="decrease">-</button>
+                <input type="number" id="product-quantity" class="form-control mx-2 text-center" value="1" min="1" max="{{ .Params.Stock }}">
+                <button class="btn btn-outline-secondary quantity-btn" data-action="increase">+</button>
+              </div>
+            </div>
+            
+            <div class="col-md-8">
+              <button id="add-to-cart" class="btn btn-primary btn-lg w-100"
+                      data-id="{{ .Params.ID }}" 
+                      data-name="{{ .Title }}" 
+                      data-price="{{ if .Params.SalePrice }}{{ .Params.SalePrice }}{{ else }}{{ .Params.Price }}{{ end }}" 
+                      data-image="{{ if .Params.Images }}{{ index .Params.Images 0 }}{{ else }}/images/placeholder-product.jpg{{ end }}">
+                <i class="fas fa-shopping-cart me-2"></i> Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+        {{ else }}
+        <div class="product-actions mb-4">
+          <button class="btn btn-secondary btn-lg w-100" disabled>Out of Stock</button>
+        </div>
+        {{ end }}
+        
+        <!-- Social sharing -->
+        <div class="social-sharing">
+          <span class="me-2">Share:</span>
+          <a href="https://www.facebook.com/sharer/sharer.php?u={{ .Permalink | absURL }}" target="_blank" class="btn btn-outline-primary btn-sm me-1">
+            <i class="fab fa-facebook-f"></i>
+          </a>
+          <a href="https://twitter.com/intent/tweet?url={{ .Permalink | absURL }}&text={{ .Title }}" target="_blank" class="btn btn-outline-primary btn-sm me-1">
+            <i class="fab fa-twitter"></i>
+          </a>
+          <a href="https://pinterest.com/pin/create/button/?url={{ .Permalink | absURL }}&media={{ if .Params.Images }}{{ index .Params.Images 0 | absURL }}{{ end }}&description={{ .Title }}" target="_blank" class="btn btn-outline-primary btn-sm me-1">
+            <i class="fab fa-pinterest-p"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Product tabs -->
+  <div class="product-tabs mt-5">
+    <ul class="nav nav-tabs" id="productTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab" aria-controls="description" aria-selected="true">Description</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="false">Details</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="shipping-tab" data-bs-toggle="tab" data-bs-target="#shipping" type="button" role="tab" aria-controls="shipping" aria-selected="false">Shipping & Returns</button>
+      </li>
+    </ul>
+    <div class="tab-content p-4 border border-top-0 rounded-bottom" id="productTabContent">
+      <div class="tab-pane fade show active" id="description" role="tabpanel" aria-labelledby="description-tab">
+        {{ .Content }}
+      </div>
+      <div class="tab-pane fade" id="details" role="tabpanel" aria-labelledby="details-tab">
+        <h4>Product Specifications</h4>
+        <table class="table table-striped">
+          <tbody>
+            <tr>
+              <th scope="row">SKU</th>
+              <td>{{ .Params.SKU }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Material</th>
+              <td>{{ .Params.Material | default "Not specified" }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Dimensions</th>
+              <td>{{ .Params.Dimensions | default "Not specified" }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Weight</th>
+              <td>{{ .Params.Weight | default "Not specified" }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pane fade" id="shipping" role="tabpanel" aria-labelledby="shipping-tab">
+        <h4>Shipping Information</h4>
+        <p>We offer free shipping on all orders over $50. Orders are typically processed within 1-2 business days and delivered within 3-5 business days depending on your location.</p>
+        
+        <h4>Return Policy</h4>
+        <p>If you're not completely satisfied with your purchase, you can return it within 30 days for a full refund. Items must be in their original condition with tags attached.</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Related products -->
+  {{ if .Params.Categories }}
+  <div class="related-products mt-5">
+    <h2 class="section-title">You May Also Like</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+      {{ $categories := .Params.Categories }}
+      {{ $currentProductID := .Params.ID }}
+      {{ $relatedProducts := slice }}
+      
+      {{ range where .Site.RegularPages "Section" "shop" }}
+        {{ if and (ne .Params.ID $currentProductID) (gt (intersect .Params.Categories $categories | len) 0) }}
+          {{ $relatedProducts = $relatedProducts | append . }}
+        {{ end }}
+      {{ end }}
+      
+      {{ range first 4 (shuffle $relatedProducts) }}
+        <div class="col">
+          {{ partial "shop/product-card.html" . }}
+        </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+  
+  <!-- Cart notification -->
+  <div id="cart-notification" class="position-fixed"></div>
+</div>
+{{ end }}

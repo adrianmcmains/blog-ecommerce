@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: blogcommerce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-blogcommerce_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-blogcommerce_password}
+      POSTGRES_DB: ${DB_NAME:-blogcommerce}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - blogcommerce-network
+
+  # API Service
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: blogcommerce-api
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-blogcommerce_user}
+      DB_PASSWORD: ${DB_PASSWORD:-blogcommerce_password}
+      DB_NAME: ${DB_NAME:-blogcommerce}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key}
+      JWT_EXPIRATION_HOURS: ${JWT_EXPIRATION_HOURS:-24}
+      PORT: 8080
+      GIN_MODE: ${GIN_MODE:-debug}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-BlogCommerce}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
+      EMAIL_DEBUG: ${EMAIL_DEBUG:-true}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - ./api:/app
+    networks:
+      - blogcommerce-network
+
+  # Hugo Development Server
+  hugo:
+    image: klakegg/hugo:ext-alpine
+    container_name: blogcommerce-hugo
+    command: server -D --bind 0.0.0.0
+    ports:
+      - "${HUGO_PORT:-1313}:1313"
+    volumes:
+      - ./:/src
+    networks:
+      - blogcommerce-network
+    environment:
+      HUGO_ENV: development
+      HUGO_MODULE_PROXY: direct
+
+  # TinaCMS Admin
+  tinacms:
+    image: node:16-alpine
+    container_name: blogcommerce-tinacms
+    working_dir: /app
+    command: sh -c "npm install -g @tinacms/cli && tinacms dev -c 'hugo server -D --bind 0.0.0.0'"
+    ports:
+      - "${TINA_PORT:-3000}:3000"
+    volumes:
+      - ./:/app
+    networks:
+      - blogcommerce-network
+    environment:
+      TINA_TOKEN: ${TINA_TOKEN:-}
+      TINA_CLIENT_ID: ${TINA_CLIENT_ID:-}
+    depends_on:
+      - hugo
+
+volumes:
+  postgres-data:
+    name: blogcommerce-postgres-data
+
+networks:
+  blogcommerce-network:
+    name: blogcommerce-network

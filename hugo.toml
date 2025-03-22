@@ -6,7 +6,7 @@ theme = ["reporter", "hargo"]
 # Site Parameters
 [params]
   description = "Integrated Blog and E-commerce Platform"
-  author = "Your Name"
+  author = "Dr. Ndaara, MD"
   # Blog Section Parameters
   [params.blog]
     title = "Our Blog"

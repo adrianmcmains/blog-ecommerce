@@ -1,0 +1,135 @@
+# Spanish translations
+
+# General site elements
+- id: home
+  translation: "Inicio"
+- id: blog
+  translation: "Blog"
+- id: shop
+  translation: "Tienda"
+- id: about
+  translation: "Acerca de"
+- id: contact
+  translation: "Contacto"
+- id: search
+  translation: "Buscar"
+- id: login
+  translation: "Iniciar Sesión"
+- id: register
+  translation: "Registrarse"
+- id: logout
+  translation: "Cerrar Sesión"
+- id: myAccount
+  translation: "Mi Cuenta"
+
+# Blog elements
+- id: recentPosts
+  translation: "Publicaciones Recientes"
+- id: categories
+  translation: "Categorías"
+- id: tags
+  translation: "Etiquetas"
+- id: readMore
+  translation: "Leer Más"
+- id: postedOn
+  translation: "Publicado el"
+- id: by
+  translation: "por"
+- id: relatedPosts
+  translation: "Publicaciones Relacionadas"
+- id: comments
+  translation: "Comentarios"
+- id: leaveComment
+  translation: "Dejar un Comentario"
+- id: yourName
+  translation: "Tu Nombre"
+- id: yourEmail
+  translation: "Tu Email"
+- id: yourMessage
+  translation: "Tu Mensaje"
+- id: submit
+  translation: "Enviar"
+
+# Shop elements
+- id: addToCart
+  translation: "Añadir al Carrito"
+- id: outOfStock
+  translation: "Agotado"
+- id: price
+  translation: "Precio"
+- id: salePrice
+  translation: "Precio de Oferta"
+- id: quantity
+  translation: "Cantidad"
+- id: cart
+  translation: "Carrito"
+- id: emptyCart
+  translation: "Tu carrito está vacío"
+- id: checkout
+  translation: "Finalizar Compra"
+- id: subtotal
+  translation: "Subtotal"
+- id: total
+  translation: "Total"
+- id: continueShopping
+  translation: "Continuar Comprando"
+- id: proceedToCheckout
+  translation: "Proceder al Pago"
+- id: shippingInformation
+  translation: "Información de Envío"
+- id: billingInformation
+  translation: "Información de Facturación"
+- id: paymentMethod
+  translation: "Método de Pago"
+- id: orderSummary
+  translation: "Resumen del Pedido"
+- id: placeOrder
+  translation: "Realizar Pedido"
+- id: orderConfirmation
+  translation: "Confirmación del Pedido"
+- id: orderNumber
+  translation: "Número de Pedido"
+- id: thankYouOrder
+  translation: "¡Gracias por tu pedido!"
+
+# User account
+- id: profile
+  translation: "Perfil"
+- id: orders
+  translation: "Pedidos"
+- id: wishlist
+  translation: "Lista de Deseos"
+- id: settings
+  translation: "Ajustes"
+- id: changePassword
+  translation: "Cambiar Contraseña"
+- id: currentPassword
+  translation: "Contraseña Actual"
+- id: newPassword
+  translation: "Nueva Contraseña"
+- id: confirmPassword
+  translation: "Confirmar Contraseña"
+- id: updateProfile
+  translation: "Actualizar Perfil"
+- id: saveChanges
+  translation: "Guardar Cambios"
+
+# Form validation
+- id: required
+  translation: "Este campo es obligatorio"
+- id: invalidEmail
+  translation: "Por favor, ingresa una dirección de correo válida"
+- id: passwordMismatch
+  translation: "Las contraseñas no coinciden"
+- id: passwordLength
+  translation: "La contraseña debe tener al menos 8 caracteres"
+
+# Error messages
+- id: pageNotFound
+  translation: "Página no encontrada"
+- id: backToHome
+  translation: "Volver al Inicio"
+- id: serverError
+  translation: "Error del servidor"
+- id: tryAgainLater
+  translation: "Por favor, inténtalo de nuevo más tarde"

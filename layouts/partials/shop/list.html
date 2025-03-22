@@ -1,0 +1,91 @@
+<!-- layouts/shop/list.html -->
+{{ define "main" }}
+<div class="shop-page container py-5">
+  <div class="row">
+    <!-- Sidebar with filters -->
+    <div class="col-lg-3">
+      <div class="shop-sidebar">
+        <div class="widget categories-widget">
+          <h4 class="widget-title">Categories</h4>
+          <ul class="categories-list">
+            {{ range .Site.Taxonomies.product_categories }}
+            <li>
+              <a href="{{ .Page.Permalink }}" class="{{ if eq $.RelPermalink .Page.RelPermalink }}active{{ end }}">
+                {{ .Page.Title }} <span class="count">({{ .Count }})</span>
+              </a>
+            </li>
+            {{ end }}
+          </ul>
+        </div>
+        
+        <div class="widget price-filter-widget">
+          <h4 class="widget-title">Price Range</h4>
+          <div class="price-filter">
+            <div class="price-slider-container">
+              <div id="price-slider"></div>
+            </div>
+            <div class="price-inputs mt-3">
+              <div class="row">
+                <div class="col-6">
+                  <label>Min:</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" id="min-price" class="form-control" value="0">
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label>Max:</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" id="max-price" class="form-control" value="1000">
+                  </div>
+                </div>
+              </div>
+              <button id="apply-price-filter" class="btn btn-outline-primary w-100 mt-3">Apply Filter</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Product grid -->
+    <div class="col-lg-9">
+      <div class="shop-header mb-4">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <h1 class="shop-title">{{ .Title }}</h1>
+            <p class="shop-description">{{ .Description }}</p>
+          </div>
+          <div class="col-md-6">
+            <div class="shop-sorting d-flex justify-content-md-end align-items-center">
+              <label for="sort-by" class="me-2">Sort by:</label>
+              <select id="sort-by" class="form-select form-select-sm" style="width: auto;">
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="price-asc">Price (Low to High)</option>
+                <option value="price-desc">Price (High to Low)</option>
+                <option value="newest">Newest First</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="product-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="product-container">
+        {{ range .Paginator.Pages }}
+          <div class="col">
+            {{ partial "shop/product-card.html" . }}
+          </div>
+        {{ end }}
+      </div>
+      
+      <!-- Pagination -->
+      {{ template "_internal/pagination.html" . }}
+    </div>
+  </div>
+</div>
+
+<!-- Cart notification -->
+<div id="cart-notification" class="position-fixed"></div>
+
+{{ end }}
