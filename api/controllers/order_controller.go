@@ -38,7 +38,7 @@ func (c *ShopController) CreateOrder(ctx *gin.Context) {
 	}
 
 	// Start transaction
-	tx, err := c.db.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
@@ -238,7 +238,7 @@ func (c *ShopController) GetOrders(ctx *gin.Context) {
 	args = append(args, limit, offset)
 
 	// Execute query
-	rows, err := c.db.Query(query, args...)
+	rows, err := c.DB.Query(query, args...)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch orders"})
 		return
@@ -271,7 +271,7 @@ func (c *ShopController) GetOrders(ctx *gin.Context) {
 		countArgs = append(countArgs, status)
 	}
 
-	err = c.db.QueryRow(countQuery, countArgs...).Scan(&totalCount)
+	err = c.DB.QueryRow(countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count orders"})
 		return
@@ -320,7 +320,7 @@ func (c *ShopController) getOrderByID(orderID, userID int) (models.Order, error)
 	var order models.Order
 
 	// Get order details
-	err := c.db.QueryRow(`
+	err := c.DB.QueryRow(`
 		SELECT id, user_id, total_amount, status, transaction_id,
 			shipping_address, billing_address, payment_method, notes,
 			created_at, updated_at
@@ -337,7 +337,7 @@ func (c *ShopController) getOrderByID(orderID, userID int) (models.Order, error)
 	}
 
 	// Get order items
-	rows, err := c.db.Query(`
+	rows, err := c.DB.Query(`
 		SELECT id, product_id, product_name, quantity, unit_price, total_price, created_at
 		FROM order_items
 		WHERE order_id = $1

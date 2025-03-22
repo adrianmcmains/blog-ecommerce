@@ -115,7 +115,7 @@ func HugoDB(config SyncConfig, contentType ContentType) error {
 // TinaToHugo syncs content from TinaCMS to Hugo content files
 func TinaToHugo(config SyncConfig) error {
 	// Read TinaCMS content directory
-	files, err := ioutil.ReadDir(config.TinaDataDir)
+	files, err := os.ReadDir(config.TinaDataDir)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func TinaToHugo(config SyncConfig) error {
 
 		// Read TinaCMS content file
 		filePath := filepath.Join(config.TinaDataDir, file.Name())
-		data, err := ioutil.ReadFile(filePath)
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
@@ -267,6 +267,14 @@ func HugoToTina(config SyncConfig) error {
 	}
 
 	return nil
+}
+
+// SyncProductsToDB syncs products from Hugo to the database
+func SyncProductsToDB(config SyncConfig) error {
+    // Implement the logic to sync products from Hugo to the database
+    // This is a placeholder implementation
+    fmt.Println("Syncing products from Hugo to the database...")
+    return nil
 }
 
 // parseMarkdownContent parses markdown content into front matter and body
@@ -1141,7 +1149,7 @@ func syncProductsToDB(config SyncConfig) error {
 		return nil // Skip if directory doesn't exist
 	}
 
-	files, err := ioutil.ReadDir(shopDir)
+	files, err := os.ReadDir(shopDir)
 	if err != nil {
 		return err
 	}
@@ -1165,7 +1173,7 @@ func syncProductsToDB(config SyncConfig) error {
 
 		// Read file
 		filePath := filepath.Join(shopDir, file.Name())
-		content, err := ioutil.ReadFile(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}

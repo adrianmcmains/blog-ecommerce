@@ -53,7 +53,7 @@ func (c *ShopController) AddToCart(ctx *gin.Context) {
 
 	// Check if product exists and is in stock
 	var product models.Product
-	err := c.db.QueryRow(`
+	err := c.DB.QueryRow(`
 		SELECT id, name, price, sale_price, stock
 		FROM products
 		WHERE id = $1 AND visible = true
@@ -76,7 +76,7 @@ func (c *ShopController) AddToCart(ctx *gin.Context) {
 
 	// Get first product image
 	var productImage string
-	err = c.db.QueryRow(`
+	err = c.DB.QueryRow(`
 		SELECT image_url
 		FROM product_images
 		WHERE product_id = $1
@@ -90,7 +90,7 @@ func (c *ShopController) AddToCart(ctx *gin.Context) {
 	}
 
 	// Start transaction
-	tx, err := c.db.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
@@ -222,7 +222,7 @@ func (c *ShopController) UpdateCartItem(ctx *gin.Context) {
 	}
 
 	// Start transaction
-	tx, err := c.db.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
@@ -349,7 +349,7 @@ func (c *ShopController) RemoveFromCart(ctx *gin.Context) {
 	}
 
 	// Start transaction
-	tx, err := c.db.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
@@ -428,7 +428,7 @@ func (c *ShopController) getOrCreateCart(userID int) (models.Cart, error) {
 	cart.UserID = userID
 
 	// Get cart ID for this user or create a new cart
-	err := c.db.QueryRow(`
+	err := c.DB.QueryRow(`
 		SELECT id, created_at, updated_at
 		FROM carts
 		WHERE user_id = $1
@@ -437,7 +437,7 @@ func (c *ShopController) getOrCreateCart(userID int) (models.Cart, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Create new cart
-			err = c.db.QueryRow(`
+			err = c.DB.QueryRow(`
 				INSERT INTO carts (user_id, created_at, updated_at)
 				VALUES ($1, NOW(), NOW())
 				RETURNING id, created_at, updated_at
@@ -451,7 +451,7 @@ func (c *ShopController) getOrCreateCart(userID int) (models.Cart, error) {
 	}
 
 	// Get cart items
-	rows, err := c.db.Query(`
+	rows, err := c.DB.Query(`
 		SELECT id, product_id, name, price, quantity, image, created_at, updated_at
 		FROM cart_items
 		WHERE cart_id = $1

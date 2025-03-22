@@ -1,571 +1,1017 @@
+// File: api/controllers/payment_controller.go
 package controllers
 
 import (
 	"database/sql"
-	"io"
-
-	"github.com/adrianmcmains/blog-ecommerce/api/models"
-	"github.com/adrianmcmains/blog-ecommerce/api/utils"
-
-	//"errors"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
-
+	"strings"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// PaymentController handles payment-related requests
+// PaymentController handles payment-related routes
 type PaymentController struct {
-	db             *sql.DB
-	paymentService *utils.EversendPaymentService
-	emailService   *utils.EmailService
+	DB              *sql.DB
+	EversendAPIKey  string
+	EversendBaseURL string
+	PayPalClientID  string
+	PayPalSecret    string
+	PayPalBaseURL   string
+	CallbackURL     string
+	WebhookSecret   string
 }
+
+// PaymentProvider represents available payment providers
+type PaymentProvider string
+
+const (
+	PaymentProviderEversend PaymentProvider = "eversend"
+	PaymentProviderPayPal   PaymentProvider = "paypal"
+)
 
 // NewPaymentController creates a new payment controller
 func NewPaymentController(db *sql.DB) (*PaymentController, error) {
-	// Initialize Eversend payment service
-	paymentService, err := utils.NewEversendPaymentService()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize payment service: %w", err)
+	eversendAPIKey := os.Getenv("EVERSEND_API_KEY")
+	eversendBaseURL := os.Getenv("EVERSEND_BASE_URL")
+	if eversendBaseURL == "" {
+		eversendBaseURL = "https://api.eversend.co/v1"
 	}
 
-	// Initialize email service
-	emailService, err := utils.NewEmailService()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize email service: %w", err)
+	paypalClientID := os.Getenv("PAYPAL_CLIENT_ID")
+	paypalSecret := os.Getenv("PAYPAL_SECRET")
+	paypalBaseURL := os.Getenv("PAYPAL_BASE_URL")
+	if paypalBaseURL == "" {
+		paypalBaseURL = "https://api-m.sandbox.paypal.com" // Sandbox by default
+	}
+
+	callbackURL := os.Getenv("PAYMENT_CALLBACK_URL")
+	webhookSecret := os.Getenv("PAYMENT_WEBHOOK_SECRET")
+
+	// Validate required credentials
+	if eversendAPIKey == "" && (paypalClientID == "" || paypalSecret == "") {
+		return nil, errors.New("at least one payment provider must be configured")
+	}
+
+	if callbackURL == "" {
+		return nil, errors.New("payment callback URL must be set")
 	}
 
 	return &PaymentController{
-		db:             db,
-		paymentService: paymentService,
-		emailService:   emailService,
+		DB:              db,
+		EversendAPIKey:  eversendAPIKey,
+		EversendBaseURL: eversendBaseURL,
+		PayPalClientID:  paypalClientID,
+		PayPalSecret:    paypalSecret,
+		PayPalBaseURL:   paypalBaseURL,
+		CallbackURL:     callbackURL,
+		WebhookSecret:   webhookSecret,
 	}, nil
 }
 
-// CreatePaymentRequest represents a request to create a payment
-type CreatePaymentRequest struct {
-	OrderID     int               `json:"orderId" binding:"required"`
-	Currency    string            `json:"currency" binding:"required"`
-	RedirectURL string            `json:"redirectUrl" binding:"required"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+// PaymentMethodInfo contains payment method details
+type PaymentMethodInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ImageURL    string `json:"image_url"`
+	Provider    string `json:"provider"`
+	Enabled     bool   `json:"enabled"`
 }
 
-// PaymentResponse represents a payment response
-type PaymentResponse struct {
-	Success      bool      `json:"success"`
-	PaymentID    string    `json:"paymentId,omitempty"`
-	PaymentURL   string    `json:"paymentUrl,omitempty"`
-	Status       string    `json:"status,omitempty"`
-	Reference    string    `json:"reference,omitempty"`
-	Amount       float64   `json:"amount,omitempty"`
-	Currency     string    `json:"currency,omitempty"`
-	CreatedAt    time.Time `json:"createdAt,omitempty"`
-	UpdatedAt    time.Time `json:"updatedAt,omitempty"`
-	ErrorMessage string    `json:"errorMessage,omitempty"`
+// InitiatePaymentRequest contains payment initialization data
+type InitiatePaymentRequest struct {
+	OrderID       string `json:"order_id" binding:"required"`
+	PaymentMethod string `json:"payment_method" binding:"required"`
+	Currency      string `json:"currency" binding:"required"`
+	ReturnURL     string `json:"return_url"`
+	CancelURL     string `json:"cancel_url"`
 }
 
-// InitiatePayment handles the initiation of a payment for an order
-func (c *PaymentController) InitiatePayment(ctx *gin.Context) {
-	// Get user ID from context (set by AuthMiddleware)
-	userID, exists := ctx.Get("userId")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+// GetPaymentMethods returns available payment methods
+func (c *PaymentController) GetPaymentMethods(ctx *gin.Context) {
+	methods := []PaymentMethodInfo{}
+
+	// Add Eversend payment methods if configured
+	if c.EversendAPIKey != "" {
+		methods = append(methods, PaymentMethodInfo{
+			ID:          "eversend_card",
+			Name:        "Credit/Debit Card",
+			Description: "Pay with Visa, Mastercard, or other credit/debit cards",
+			ImageURL:    "/images/payment/card.png",
+			Provider:    string(PaymentProviderEversend),
+			Enabled:     true,
+		})
+		methods = append(methods, PaymentMethodInfo{
+			ID:          "eversend_mobile",
+			Name:        "Mobile Money",
+			Description: "Pay with Mobile Money",
+			ImageURL:    "/images/payment/mobile.png",
+			Provider:    string(PaymentProviderEversend),
+			Enabled:     true,
+		})
 	}
 
-	// Parse request body
-	var req CreatePaymentRequest
+	// Add PayPal payment methods if configured
+	if c.PayPalClientID != "" && c.PayPalSecret != "" {
+		methods = append(methods, PaymentMethodInfo{
+			ID:          "paypal",
+			Name:        "PayPal",
+			Description: "Pay with your PayPal account",
+			ImageURL:    "/images/payment/paypal.png",
+			Provider:    string(PaymentProviderPayPal),
+			Enabled:     true,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"payment_methods": methods})
+}
+
+// InitiatePayment starts the payment process
+func (c *PaymentController) InitiatePayment(ctx *gin.Context) {
+	var req InitiatePaymentRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get order from database
-	var order models.Order
-	err := c.db.QueryRow(`
-		SELECT id, user_id, total_amount, status
-		FROM orders
-		WHERE id = $1
-	`, req.OrderID).Scan(&order.ID, &order.UserID, &order.TotalAmount, &order.Status)
+	// Get order details
+	var orderTotal float64
+	var orderStatus string
+	err := c.DB.QueryRow(`
+		SELECT total, status FROM orders WHERE id = $1
+	`, req.OrderID).Scan(&orderTotal, &orderStatus)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 
-	// Verify that the order belongs to the authenticated user
-	if order.UserID != userID {
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this order"})
-		return
-	}
-
-	// Check if order is in a valid state for payment
-	if order.Status != "pending" && order.Status != "payment_failed" {
+	if orderStatus != "pending" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Order is not in a valid state for payment"})
 		return
 	}
 
-	// Get customer information
-	var customer models.User
-	err = c.db.QueryRow(`
-		SELECT id, name, email
-		FROM users
-		WHERE id = $1
-	`, userID).Scan(&customer.ID, &customer.Name, &customer.Email)
+	// Create payment record
+	paymentID := uuid.New().String()
+	_, err = c.DB.Exec(`
+		INSERT INTO payments (
+			id, order_id, amount, currency, payment_method, status, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+	`, paymentID, req.OrderID, orderTotal, req.Currency, req.PaymentMethod, "initiated", time.Now())
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get customer information"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment record"})
 		return
 	}
 
-	// Split name into first name and last name (assuming name is "First Last")
-	firstName, lastName := splitName(customer.Name)
+	// Determine payment provider and process accordingly
+	var paymentURL string
+	var providerRef string
 
-	// Generate a unique reference for the payment
-	reference := fmt.Sprintf("order_%d_%s", order.ID, uuid.New().String()[:8])
-
-	// Get base URL from environment or use default
-	baseURL := os.Getenv("API_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8080/api"
-	}
-
-	// Create webhook URL
-	webhookURL := fmt.Sprintf("%s/payments/webhook", baseURL)
-
-	// Prepare payment request
-	paymentReq := utils.EversendPaymentRequest{
-		Amount:      order.TotalAmount,
-		Currency:    req.Currency,
-		Description: fmt.Sprintf("Payment for Order #%d", order.ID),
-		Reference:   reference,
-		CustomerInfo: utils.EversendCustomer{
-			FirstName: firstName,
-			LastName:  lastName,
-			Email:     customer.Email,
-		},
-		RedirectURL: req.RedirectURL,
-		WebhookURL:  webhookURL,
-		Metadata: map[string]string{
-			"orderID": strconv.Itoa(order.ID),
-			"userID":  strconv.Itoa(customer.ID),
-		},
-	}
-
-	// If custom metadata is provided, merge it
-	if req.Metadata != nil {
-		for k, v := range req.Metadata {
-			paymentReq.Metadata[k] = v
-		}
-	}
-
-	// Create payment
-	paymentResp, err := c.paymentService.CreatePayment(paymentReq)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create payment: %v", err)})
+	switch {
+	case strings.HasPrefix(req.PaymentMethod, "eversend"):
+		paymentURL, providerRef, err = c.processEversendPayment(paymentID, req.OrderID, orderTotal, req.Currency, req.PaymentMethod, req.ReturnURL)
+	case req.PaymentMethod == "paypal":
+		paymentURL, providerRef, err = c.processPayPalPayment(paymentID, req.OrderID, orderTotal, req.Currency, req.ReturnURL, req.CancelURL)
+	default:
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported payment method"})
 		return
 	}
 
-	// Update order status
-	_, err = c.db.Exec(`
-		UPDATE orders
-		SET status = $1, transaction_id = $2, updated_at = NOW()
+	if err != nil {
+		// Update payment status to failed
+		c.DB.Exec(`
+			UPDATE payments 
+			SET status = 'failed', error_message = $1, updated_at = $2
+			WHERE id = $3
+		`, err.Error(), time.Now(), paymentID)
+		
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Payment initiation failed: %v", err)})
+		return
+	}
+
+	// Update payment with provider reference
+	_, err = c.DB.Exec(`
+		UPDATE payments
+		SET provider_reference = $1, updated_at = $2
 		WHERE id = $3
-	`, "payment_pending", paymentResp.PaymentID, order.ID)
+	`, providerRef, time.Now(), paymentID)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-		return
+		// Non-critical error, just log it
+		fmt.Printf("Failed to update payment with provider reference: %v\n", err)
 	}
 
-	// Store payment details in payment_transactions table
-	_, err = c.db.Exec(`
-		INSERT INTO payment_transactions (
-			order_id, 
-			transaction_id, 
-			provider, 
-			amount, 
-			currency, 
-			status, 
-			payment_url,
-			reference,
-			created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-	`, order.ID, paymentResp.PaymentID, "eversend", order.TotalAmount, req.Currency, paymentResp.Status, paymentResp.PaymentURL, reference)
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store payment transaction"})
-		return
-	}
-
-	// Return payment information
-	ctx.JSON(http.StatusOK, PaymentResponse{
-		Success:   true,
-		PaymentID: paymentResp.PaymentID,
-		PaymentURL: paymentResp.PaymentURL,
-		Status:    paymentResp.Status,
-		Reference: paymentResp.Reference,
-		Amount:    order.TotalAmount,
-		Currency:  req.Currency,
+	ctx.JSON(http.StatusOK, gin.H{
+		"payment_id":   paymentID,
+		"payment_url":  paymentURL,
+		"provider_ref": providerRef,
 	})
 }
 
-// GetPaymentStatus gets the status of a payment
-func (c *PaymentController) GetPaymentStatus(ctx *gin.Context) {
-	// Get payment ID from URL parameter
-	paymentID := ctx.Param("id")
-	if paymentID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payment ID is required"})
-		return
+// processEversendPayment handles payment through Eversend
+func (c *PaymentController) processEversendPayment(paymentID, orderID string, amount float64, currency, method, returnURL string) (string, string, error) {
+	// Create payment request for Eversend API
+	paymentType := "card"
+	if method == "eversend_mobile" {
+		paymentType = "mobile_money"
 	}
 
-	// Check if the payment exists in our database
-	var orderID int
-	var userID int
-	var status string
-	err := c.db.QueryRow(`
-		SELECT t.order_id, o.user_id, t.status
-		FROM payment_transactions t
-		JOIN orders o ON t.order_id = o.id
-		WHERE t.transaction_id = $1
-	`, paymentID).Scan(&orderID, &userID, &status)
+	// Create request body
+	requestBody := map[string]interface{}{
+		"amount":      amount,
+		"currency":    currency,
+		"description": fmt.Sprintf("Payment for order %s", orderID),
+		"payment_type": paymentType,
+		"metadata": map[string]string{
+			"payment_id": paymentID,
+			"order_id":   orderID,
+		},
+		"callback_url": c.CallbackURL,
+		"redirect_url": returnURL,
+	}
 
+	jsonData, err := json.Marshal(requestBody)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-		return
+		return "", "", err
 	}
 
-	// Check if the authenticated user owns the payment
-	authUserID, exists := ctx.Get("userId")
-	if !exists || authUserID != userID {
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this payment"})
-		return
-	}
-
-	// Get payment status from Eversend
-	paymentStatus, err := c.paymentService.GetPaymentStatus(paymentID)
+	// Make API request to Eversend
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/payments", c.EversendBaseURL), strings.NewReader(string(jsonData)))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get payment status: %v", err)})
-		return
+		return "", "", err
 	}
 
-	// Check if status has changed
-	if paymentStatus.Status != status {
-		// Update status in our database
-		_, err = c.db.Exec(`
-			UPDATE payment_transactions
-			SET status = $1, updated_at = NOW()
-			WHERE transaction_id = $2
-		`, paymentStatus.Status, paymentID)
-		
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment status"})
-			return
-		}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.EversendAPIKey))
 
-		// Update order status if payment is completed or failed
-		if paymentStatus.Status == "completed" {
-			_, err = c.db.Exec(`
-				UPDATE orders
-				SET status = 'paid', updated_at = NOW()
-				WHERE id = $1
-			`, orderID)
-			
-			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-				return
-			}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
 
-			// Send order confirmation email
-			go c.sendOrderConfirmationEmail(orderID)
-		} else if paymentStatus.Status == "failed" {
-			_, err = c.db.Exec(`
-				UPDATE orders
-				SET status = 'payment_failed', updated_at = NOW()
-				WHERE id = $1
-			`, orderID)
-			
-			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-				return
-			}
-		}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
 	}
 
-	// Return payment status
-	ctx.JSON(http.StatusOK, PaymentResponse{
-		Success:   true,
-		PaymentID: paymentStatus.PaymentID,
-		Status:    paymentStatus.Status,
-		Reference: paymentStatus.Reference,
-		Amount:    paymentStatus.Amount,
-		Currency:  paymentStatus.Currency,
-		CreatedAt: paymentStatus.CreatedAt,
-		UpdatedAt: paymentStatus.UpdatedAt,
-	})
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return "", "", fmt.Errorf("eversend API error: %s", string(body))
+	}
+
+	// Parse response
+	var response struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ID          string `json:"id"`
+			PaymentURL  string `json:"payment_url"`
+			Status      string `json:"status"`
+			ReferenceID string `json:"reference_id"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", "", err
+	}
+
+	if !response.Success {
+		return "", "", errors.New("eversend payment creation failed")
+	}
+
+	return response.Data.PaymentURL, response.Data.ID, nil
 }
 
-// WebhookHandler handles webhooks from Eversend
-func (c *PaymentController) WebhookHandler(ctx *gin.Context) {
-	// Get request body
-	body, err := io.ReadAll(ctx.Request.Body)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-		return
-	}
-
-	// Get signature from header
-	signature := ctx.GetHeader("X-Eversend-Signature")
-	if signature == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing webhook signature"})
-		return
-	}
-
-	// Verify signature
-	if !c.paymentService.VerifyWebhookSignature(body, signature) {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook signature"})
-		return
-	}
-
-	// Parse webhook payload
-	webhookPayload, err := c.paymentService.ParseWebhookPayload(body)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to parse webhook payload: %v", err)})
-		return
-	}
-
-	// Get order ID from metadata
-	orderIDStr, ok := webhookPayload.Metadata["orderID"]
-	if !ok {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing orderID in metadata"})
-		return
-	}
-
-	orderID, err := strconv.Atoi(orderIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid orderID in metadata"})
-		return
-	}
-
-	// Update payment transaction status
-	_, err = c.db.Exec(`
-		UPDATE payment_transactions
-		SET status = $1, updated_at = NOW()
-		WHERE transaction_id = $2
-	`, webhookPayload.Status, webhookPayload.PaymentID)
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment status"})
-		return
-	}
-
-	// Update order status based on payment status
-	if webhookPayload.Status == "completed" {
-		_, err = c.db.Exec(`
-			UPDATE orders
-			SET status = 'paid', updated_at = NOW()
-			WHERE id = $1
-		`, orderID)
-		
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-			return
-		}
-
-		// Send order confirmation email
-		go c.sendOrderConfirmationEmail(orderID)
-	} else if webhookPayload.Status == "failed" {
-		_, err = c.db.Exec(`
-			UPDATE orders
-			SET status = 'payment_failed', updated_at = NOW()
-			WHERE id = $1
-		`, orderID)
-		
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-			return
-		}
-	}
-
-	// Return success response
-	ctx.JSON(http.StatusOK, gin.H{"success": true})
-}
-
-// CancelPayment cancels a pending payment
-func (c *PaymentController) CancelPayment(ctx *gin.Context) {
-	// Get payment ID from URL parameter
-	paymentID := ctx.Param("id")
-	if paymentID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payment ID is required"})
-		return
-	}
-
-	// Check if the payment exists in our database
-	var orderID int
-	var userID int
-	var status string
-	err := c.db.QueryRow(`
-		SELECT t.order_id, o.user_id, t.status
-		FROM payment_transactions t
-		JOIN orders o ON t.order_id = o.id
-		WHERE t.transaction_id = $1
-	`, paymentID).Scan(&orderID, &userID, &status)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-		return
-	}
-
-	// Check if the authenticated user owns the payment
-	authUserID, exists := ctx.Get("userId")
-	if !exists || authUserID != userID {
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this payment"})
-		return
-	}
-
-	// Check if payment is in a state that can be canceled
-	if status != "pending" && status != "created" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payment cannot be canceled in its current state"})
-		return
-	}
-
-	// Cancel payment in Eversend
-	err = c.paymentService.CancelPayment(paymentID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to cancel payment: %v", err)})
-		return
-	}
-
-	// Update payment transaction status
-	_, err = c.db.Exec(`
-		UPDATE payment_transactions
-		SET status = 'canceled', updated_at = NOW()
-		WHERE transaction_id = $1
-	`, paymentID)
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment status"})
-		return
-	}
-
-	// Update order status
-	_, err = c.db.Exec(`
-		UPDATE orders
-		SET status = 'payment_canceled', updated_at = NOW()
-		WHERE id = $1
-	`, orderID)
+// processPayPalPayment handles payment through PayPal
+func (c *PaymentController) processPayPalPayment(paymentID, orderID string, amount float64, currency, returnURL, cancelURL string) (string, string, error) {
+	// First, get an access token
+	tokenURL := fmt.Sprintf("%s/v1/oauth2/token", c.PayPalBaseURL)
+	client := &http.Client{}
 	
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader("grant_type=client_credentials"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
-		return
+		return "", "", err
 	}
-
-	// Return success response
-	ctx.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment canceled successfully"})
-}
-
-// Helper function to split full name into first and last name
-func splitName(fullName string) (string, string) {
-	var firstName, lastName string
 	
-	// Find the first space in the name
-	spaceIndex := -1
-	for i, r := range fullName {
-		if r == ' ' {
-			spaceIndex = i
+	req.SetBasicAuth(c.PayPalClientID, c.PayPalSecret)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	
+	var tokenResponse struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	
+	if err := json.Unmarshal(body, &tokenResponse); err != nil {
+		return "", "", err
+	}
+	
+	if tokenResponse.AccessToken == "" {
+		return "", "", errors.New("failed to get PayPal access token")
+	}
+	
+	// Create PayPal order
+	orderURL := fmt.Sprintf("%s/v2/checkout/orders", c.PayPalBaseURL)
+	
+	// Format amount with proper precision
+	amountStr := strconv.FormatFloat(amount, 'f', 2, 64)
+	
+	orderData := map[string]interface{}{
+		"intent": "CAPTURE",
+		"purchase_units": []map[string]interface{}{
+			{
+				"reference_id": orderID,
+				"amount": map[string]interface{}{
+					"currency_code": currency,
+					"value":         amountStr,
+				},
+				"description": fmt.Sprintf("Payment for order %s", orderID),
+				"custom_id":   paymentID,
+			},
+		},
+		"application_context": map[string]interface{}{
+			"return_url": returnURL,
+			"cancel_url": cancelURL,
+		},
+	}
+	
+	jsonData, err := json.Marshal(orderData)
+	if err != nil {
+		return "", "", err
+	}
+	
+	orderReq, err := http.NewRequest("POST", orderURL, strings.NewReader(string(jsonData)))
+	if err != nil {
+		return "", "", err
+	}
+	
+	orderReq.Header.Set("Content-Type", "application/json")
+	orderReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenResponse.AccessToken))
+	
+	orderResp, err := client.Do(orderReq)
+	if err != nil {
+		return "", "", err
+	}
+	defer orderResp.Body.Close()
+	
+	orderBody, err := ioutil.ReadAll(orderResp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	
+	if orderResp.StatusCode != http.StatusCreated && orderResp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("PayPal API error: %s", string(orderBody))
+	}
+	
+	var orderResponse struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+		Links  []struct {
+			Href   string `json:"href"`
+			Rel    string `json:"rel"`
+			Method string `json:"method"`
+		} `json:"links"`
+	}
+	
+	if err := json.Unmarshal(orderBody, &orderResponse); err != nil {
+		return "", "", err
+	}
+	
+	// Find the approval URL
+	var approvalURL string
+	for _, link := range orderResponse.Links {
+		if link.Rel == "approve" {
+			approvalURL = link.Href
 			break
 		}
 	}
 	
-	// If no space is found, use the full name as first name
-	if spaceIndex == -1 {
-		firstName = fullName
-		lastName = ""
-	} else {
-		firstName = fullName[:spaceIndex]
-		lastName = fullName[spaceIndex+1:]
+	if approvalURL == "" {
+		return "", "", errors.New("no approval URL found in PayPal response")
 	}
 	
-	return firstName, lastName
+	return approvalURL, orderResponse.ID, nil
 }
 
-// sendOrderConfirmationEmail sends an order confirmation email
-func (c *PaymentController) sendOrderConfirmationEmail(orderID int) {
-	var (
-		userID       int
-		userEmail    string
-		userName     string
-		orderNumber  int
-		totalAmount  float64
-		orderDetails string
+// GetPaymentStatus checks the status of a payment
+func (c *PaymentController) GetPaymentStatus(ctx *gin.Context) {
+	paymentID := ctx.Param("id")
+	userID, _ := ctx.Get("userID")
+	
+	var payment struct {
+		ID               string    `json:"id"`
+		OrderID          string    `json:"order_id"`
+		Amount           float64   `json:"amount"`
+		Currency         string    `json:"currency"`
+		Status           string    `json:"status"`
+		PaymentMethod    string    `json:"payment_method"`
+		ProviderReference string   `json:"provider_reference"`
+		CreatedAt        time.Time `json:"created_at"`
+		UpdatedAt        time.Time `json:"updated_at"`
+	}
+	
+	// Get payment details
+	err := c.DB.QueryRow(`
+		SELECT p.id, p.order_id, p.amount, p.currency, p.status, p.payment_method, p.provider_reference, p.created_at, p.updated_at
+		FROM payments p
+		JOIN orders o ON p.order_id = o.id
+		WHERE p.id = $1 AND o.user_id = $2
+	`, paymentID, userID).Scan(
+		&payment.ID, &payment.OrderID, &payment.Amount, &payment.Currency,
+		&payment.Status, &payment.PaymentMethod, &payment.ProviderReference,
+		&payment.CreatedAt, &payment.UpdatedAt,
 	)
-
-	// Get order and user information
-	err := c.db.QueryRow(`
-		SELECT o.id, o.user_id, o.total_amount, u.email, u.name
-		FROM orders o
-		JOIN users u ON o.user_id = u.id
-		WHERE o.id = $1
-	`, orderID).Scan(&orderNumber, &userID, &totalAmount, &userEmail, &userName)
-
+	
 	if err != nil {
-		fmt.Printf("Error getting order information for email: %v\n", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
 		return
 	}
-
-	// Get order items
-	rows, err := c.db.Query(`
-		SELECT product_name, quantity, unit_price, total_price
-		FROM order_items
-		WHERE order_id = $1
-		ORDER BY id
-	`, orderID)
-
-	if err != nil {
-		fmt.Printf("Error getting order items for email: %v\n", err)
-		return
-	}
-	defer rows.Close()
-
-	// Build order details HTML
-	orderDetails = "<table style='width:100%; border-collapse:collapse;'>"
-	orderDetails += "<tr style='background-color:#f0f0f0;'><th style='padding:8px; text-align:left; border:1px solid #ddd;'>Product</th><th style='padding:8px; text-align:right; border:1px solid #ddd;'>Quantity</th><th style='padding:8px; text-align:right; border:1px solid #ddd;'>Unit Price</th><th style='padding:8px; text-align:right; border:1px solid #ddd;'>Total</th></tr>"
-
-	for rows.Next() {
-		var productName string
-		var quantity int
-		var unitPrice, totalPrice float64
-
-		if err := rows.Scan(&productName, &quantity, &unitPrice, &totalPrice); err != nil {
-			fmt.Printf("Error scanning order item: %v\n", err)
-			continue
+	
+	// If payment is in a non-final state, check with the provider for updates
+	if payment.Status == "initiated" || payment.Status == "processing" {
+		var newStatus string
+		var err error
+		
+		// Check payment status with the appropriate provider
+		if strings.HasPrefix(payment.PaymentMethod, "eversend") {
+			newStatus, err = c.checkEversendPaymentStatus(payment.ProviderReference)
+		} else if payment.PaymentMethod == "paypal" {
+			newStatus, err = c.checkPayPalPaymentStatus(payment.ProviderReference)
 		}
-
-		orderDetails += fmt.Sprintf("<tr><td style='padding:8px; border:1px solid #ddd;'>%s</td><td style='padding:8px; text-align:right; border:1px solid #ddd;'>%d</td><td style='padding:8px; text-align:right; border:1px solid #ddd;'>$%.2f</td><td style='padding:8px; text-align:right; border:1px solid #ddd;'>$%.2f</td></tr>", productName, quantity, unitPrice, totalPrice)
+		
+		if err == nil && newStatus != "" && newStatus != payment.Status {
+			// Update payment status in the database
+			_, err = c.DB.Exec(`
+				UPDATE payments
+				SET status = $1, updated_at = $2
+				WHERE id = $3
+			`, newStatus, time.Now(), paymentID)
+			
+			if err == nil {
+				payment.Status = newStatus
+				payment.UpdatedAt = time.Now()
+				
+				// If payment is completed, update order status
+				if newStatus == "completed" {
+					c.DB.Exec(`
+						UPDATE orders
+						SET status = 'processing', updated_at = $1
+						WHERE id = $2 AND status = 'pending'
+					`, time.Now(), payment.OrderID)
+				}
+			}
+		}
 	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"payment": payment})
+}
 
-	orderDetails += fmt.Sprintf("<tr style='font-weight:bold;'><td colspan='3' style='padding:8px; text-align:right; border:1px solid #ddd;'>Total</td><td style='padding:8px; text-align:right; border:1px solid #ddd;'>$%.2f</td></tr>", totalAmount)
-	orderDetails += "</table>"
-
-	// Send email
-	err = c.emailService.SendOrderConfirmationEmail(userEmail, userName, strconv.Itoa(orderNumber), orderDetails, totalAmount)
+// checkEversendPaymentStatus checks the status of an Eversend payment
+func (c *PaymentController) checkEversendPaymentStatus(paymentRef string) (string, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/payments/%s", c.EversendBaseURL, paymentRef), nil)
 	if err != nil {
-		fmt.Printf("Error sending order confirmation email: %v\n", err)
+		return "", err
 	}
+	
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.EversendAPIKey))
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("eversend API error: %s", string(body))
+	}
+	
+	var response struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", err
+	}
+	
+	if !response.Success {
+		return "", errors.New("eversend API returned unsuccessful response")
+	}
+	
+	// Map Eversend status to our status
+	switch response.Data.Status {
+	case "pending":
+		return "processing", nil
+	case "successful":
+		return "completed", nil
+	case "failed":
+		return "failed", nil
+	default:
+		return "", nil // Unknown status, don't update
+	}
+}
+
+// checkPayPalPaymentStatus checks the status of a PayPal payment
+func (c *PaymentController) checkPayPalPaymentStatus(orderID string) (string, error) {
+	// First, get an access token
+	tokenURL := fmt.Sprintf("%s/v1/oauth2/token", c.PayPalBaseURL)
+	client := &http.Client{}
+	
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader("grant_type=client_credentials"))
+	if err != nil {
+		return "", err
+	}
+	
+	req.SetBasicAuth(c.PayPalClientID, c.PayPalSecret)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	
+	var tokenResponse struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	
+	if err := json.Unmarshal(body, &tokenResponse); err != nil {
+		return "", err
+	}
+	
+	if tokenResponse.AccessToken == "" {
+		return "", errors.New("failed to get PayPal access token")
+	}
+	
+	// Get order details
+	orderURL := fmt.Sprintf("%s/v2/checkout/orders/%s", c.PayPalBaseURL, orderID)
+	
+	orderReq, err := http.NewRequest("GET", orderURL, nil)
+	if err != nil {
+		return "", err
+	}
+	
+	orderReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenResponse.AccessToken))
+	
+	orderResp, err := client.Do(orderReq)
+	if err != nil {
+		return "", err
+	}
+	defer orderResp.Body.Close()
+	
+	orderBody, err := ioutil.ReadAll(orderResp.Body)
+	if err != nil {
+		return "", err
+	}
+	
+	if orderResp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("PayPal API error: %s", string(orderBody))
+	}
+	
+	var orderResponse struct {
+		Status string `json:"status"`
+	}
+	
+	if err := json.Unmarshal(orderBody, &orderResponse); err != nil {
+		return "", err
+	}
+	
+	// Map PayPal status to our status
+	switch orderResponse.Status {
+	case "CREATED":
+		return "initiated", nil
+	case "SAVED":
+		return "initiated", nil
+	case "APPROVED":
+		return "processing", nil
+	case "VOIDED":
+		return "canceled", nil
+	case "COMPLETED":
+		return "completed", nil
+	default:
+		return "", nil // Unknown status, don't update
+	}
+}
+
+// CancelPayment cancels a payment
+func (c *PaymentController) CancelPayment(ctx *gin.Context) {
+	paymentID := ctx.Param("id")
+	userID, _ := ctx.Get("userID")
+	
+	// Check if payment belongs to user and is in a cancellable state
+	var paymentMethod, providerRef, orderID string
+	var status string
+	
+	err := c.DB.QueryRow(`
+		SELECT p.payment_method, p.provider_reference, p.status, p.order_id
+		FROM payments p
+		JOIN orders o ON p.order_id = o.id
+		WHERE p.id = $1 AND o.user_id = $2
+	`, paymentID, userID).Scan(&paymentMethod, &providerRef, &status, &orderID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
+		return
+	}
+	
+	// Check if payment can be canceled
+	if status != "initiated" && status != "processing" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payment cannot be canceled in its current state"})
+		return
+	}
+	
+	// Cancel payment with the appropriate provider
+	var cancelErr error
+	if strings.HasPrefix(paymentMethod, "eversend") {
+		cancelErr = c.cancelEversendPayment(providerRef)
+	} else if paymentMethod == "paypal" {
+		cancelErr = c.cancelPayPalPayment(providerRef)
+	}
+	
+	if cancelErr != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to cancel payment: %v", cancelErr)})
+		return
+	}
+	
+	// Update payment status
+	_, err = c.DB.Exec(`
+		UPDATE payments
+		SET status = 'canceled', updated_at = $1
+		WHERE id = $2
+	`, time.Now(), paymentID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment status"})
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "Payment canceled successfully"})
+}
+
+// cancelEversendPayment cancels an Eversend payment
+func (c *PaymentController) cancelEversendPayment(paymentRef string) error {
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/payments/%s/cancel", c.EversendBaseURL, paymentRef), nil)
+	if err != nil {
+		return err
+	}
+	
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.EversendAPIKey))
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("eversend API error: %s", string(body))
+	}
+	
+	return nil
+}
+
+// cancelPayPalPayment cancels a PayPal payment
+func (c *PaymentController) cancelPayPalPayment(orderID string) error {
+	// First, get an access token
+	tokenURL := fmt.Sprintf("%s/v1/oauth2/token", c.PayPalBaseURL)
+	client := &http.Client{}
+	
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader("grant_type=client_credentials"))
+	if err != nil {
+		return err
+	}
+	
+	req.SetBasicAuth(c.PayPalClientID, c.PayPalSecret)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	
+	var tokenResponse struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	
+	if err := json.Unmarshal(body, &tokenResponse); err != nil {
+		return err
+	}
+	
+	if tokenResponse.AccessToken == "" {
+		return errors.New("failed to get PayPal access token")
+	}
+	
+	// Cancel the order
+	cancelURL := fmt.Sprintf("%s/v2/checkout/orders/%s/cancel", c.PayPalBaseURL, orderID)
+	
+	cancelReq, err := http.NewRequest("POST", cancelURL, nil)
+	if err != nil {
+		return err
+	}
+	
+	cancelReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenResponse.AccessToken))
+	cancelReq.Header.Set("Content-Type", "application/json")
+	
+	cancelResp, err := client.Do(cancelReq)
+	if err != nil {
+		return err
+	}
+	defer cancelResp.Body.Close()
+	
+	if cancelResp.StatusCode != http.StatusOK && cancelResp.StatusCode != http.StatusNoContent {
+		cancelBody, _ := ioutil.ReadAll(cancelResp.Body)
+		return fmt.Errorf("PayPal API error: %s", string(cancelBody))
+	}
+	
+	return nil
+}
+
+// WebhookHandler handles payment webhooks from payment providers
+func (c *PaymentController) WebhookHandler(ctx *gin.Context) {
+	// Get webhook signature from headers
+	signature := ctx.GetHeader("X-Webhook-Signature")
+	
+	// Read request body
+	body, err := ioutil.ReadAll(ctx.Request.Body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	
+	// Determine the provider from headers or payload
+	provider := ctx.GetHeader("X-Payment-Provider")
+	if provider == "" {
+		// Try to determine from the payload
+		var genericPayload map[string]interface{}
+		if err := json.Unmarshal(body, &genericPayload); err == nil {
+			// Look for provider-specific fields
+			if _, ok := genericPayload["event_type"]; ok {
+				provider = "eversend"
+			} else if _, ok := genericPayload["event_type"]; ok {
+				provider = "paypal"
+			}
+		}
+	}
+	
+	switch provider {
+	case "eversend":
+		c.handleEversendWebhook(ctx, body, signature)
+	case "paypal":
+		c.handlePayPalWebhook(ctx, body, signature)
+	default:
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payment provider"})
+	}
+}
+
+// handleEversendWebhook processes Eversend webhook events
+func (c *PaymentController) handleEversendWebhook(ctx *gin.Context, body []byte, signature string) {
+	// Verify webhook signature if available
+	if c.WebhookSecret != "" && signature != "" {
+		// Implementation of signature verification would go here
+		// For example, using HMAC SHA256 to verify the signature
+	}
+	
+	// Parse webhook payload
+	var webhook struct {
+		EventType string `json:"event_type"`
+		Data struct {
+			ID          string  `json:"id"`
+			Status      string  `json:"status"`
+			Amount      float64 `json:"amount"`
+			Currency    string  `json:"currency"`
+			Metadata    map[string]string `json:"metadata"`
+		} `json:"data"`
+	}
+	
+	if err := json.Unmarshal(body, &webhook); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook payload"})
+		return
+	}
+	
+	// Process based on event type
+	if webhook.EventType != "payment.update" {
+		// We only care about payment updates
+		ctx.JSON(http.StatusOK, gin.H{"status": "ignored"})
+		return
+	}
+	
+	// Get payment ID from metadata
+	paymentID, ok := webhook.Data.Metadata["payment_id"]
+	if !ok {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing payment_id in metadata"})
+		return
+	}
+	
+	// Map Eversend status to our status
+	var status string
+	switch webhook.Data.Status {
+	case "pending":
+		status = "processing"
+	case "successful":
+		status = "completed"
+	case "failed":
+		status = "failed"
+	default:
+		ctx.JSON(http.StatusOK, gin.H{"status": "unknown_status"})
+		return
+	}
+	
+	// Update payment in database
+	var orderID string
+	err := c.DB.QueryRow(`
+		SELECT order_id FROM payments
+		WHERE id = $1 AND provider_reference = $2
+	`, paymentID, webhook.Data.ID).Scan(&orderID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
+		return
+	}
+	
+	// Update payment status
+	_, err = c.DB.Exec(`
+		UPDATE payments
+		SET status = $1, updated_at = $2
+		WHERE id = $3
+	`, status, time.Now(), paymentID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment"})
+		return
+	}
+	
+	// If payment is completed, update order status
+	if status == "completed" {
+		_, err = c.DB.Exec(`
+			UPDATE orders
+			SET status = 'processing', updated_at = $1
+			WHERE id = $2
+		`, time.Now(), orderID)
+		
+		if err != nil {
+			// Non-critical error, just log it
+			fmt.Printf("Failed to update order status: %v\n", err)
+		}
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"status": "processed"})
+}
+
+// handlePayPalWebhook processes PayPal webhook events
+func (c *PaymentController) handlePayPalWebhook(ctx *gin.Context, body []byte, signature string) {
+	// Verify webhook signature if available
+	if c.WebhookSecret != "" && signature != "" {
+		// Implementation of signature verification would go here
+	}
+	
+	// Parse webhook payload
+	var webhook struct {
+		EventType string `json:"event_type"`
+		Resource struct {
+			ID         string `json:"id"`
+			Status     string `json:"status"`
+			CustomID   string `json:"custom_id"` // This contains our payment ID
+			PurchaseUnits []struct {
+				ReferenceID string `json:"reference_id"` // This contains our order ID
+			} `json:"purchase_units"`
+		} `json:"resource"`
+	}
+	
+	if err := json.Unmarshal(body, &webhook); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook payload"})
+		return
+	}
+	
+	// We only care about certain event types
+	validEvents := map[string]bool{
+		"PAYMENT.AUTHORIZATION.CREATED": true,
+		"PAYMENT.CAPTURE.COMPLETED":     true,
+		"PAYMENT.CAPTURE.DENIED":        true,
+		"CHECKOUT.ORDER.APPROVED":       true,
+		"CHECKOUT.ORDER.COMPLETED":      true,
+	}
+	
+	if !validEvents[webhook.EventType] {
+		ctx.JSON(http.StatusOK, gin.H{"status": "ignored"})
+		return
+	}
+	
+	// Get payment ID from custom_id
+	paymentID := webhook.Resource.CustomID
+	if paymentID == "" && len(webhook.Resource.PurchaseUnits) > 0 {
+		// Try to find payment by order reference
+		orderID := webhook.Resource.PurchaseUnits[0].ReferenceID
+		if orderID != "" {
+			err := c.DB.QueryRow(`
+				SELECT id FROM payments
+				WHERE order_id = $1 AND provider_reference = $2
+			`, orderID, webhook.Resource.ID).Scan(&paymentID)
+			if err != nil {
+				ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
+				return
+			}
+		} else {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing payment identifier"})
+			return
+		}
+	}
+	
+	// Map PayPal status to our status
+	var status string
+	switch webhook.Resource.Status {
+	case "CREATED":
+		status = "initiated"
+	case "SAVED":
+		status = "initiated"
+	case "APPROVED":
+		status = "processing"
+	case "VOIDED":
+		status = "canceled"
+	case "COMPLETED":
+		status = "completed"
+	default:
+		ctx.JSON(http.StatusOK, gin.H{"status": "unknown_status"})
+		return
+	}
+	
+	// Update payment in database
+	var orderID string
+	err := c.DB.QueryRow(`
+		SELECT order_id FROM payments
+		WHERE id = $1
+	`, paymentID).Scan(&orderID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
+		return
+	}
+	
+	// Update payment status
+	_, err = c.DB.Exec(`
+		UPDATE payments
+		SET status = $1, updated_at = $2
+		WHERE id = $3
+	`, status, time.Now(), paymentID)
+	
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update payment"})
+		return
+	}
+	
+	// If payment is completed, update order status
+	if status == "completed" {
+		_, err = c.DB.Exec(`
+			UPDATE orders
+			SET status = 'processing', updated_at = $1
+			WHERE id = $2
+		`, time.Now(), orderID)
+		
+		if err != nil {
+			// Non-critical error, just log it
+			fmt.Printf("Failed to update order status: %v\n", err)
+		}
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"status": "processed"})
 }
